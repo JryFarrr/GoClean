@@ -1,0 +1,155 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  TPS
+  ADMIN
+}
+
+enum PickupStatus {
+  PENDING
+  ACCEPTED
+  ON_THE_WAY
+  PICKED_UP
+  COMPLETED
+  CANCELLED
+}
+
+enum WasteType {
+  ORGANIC
+  PLASTIC
+  PAPER
+  METAL
+  GLASS
+  ELECTRONIC
+  OTHER
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String
+  phone         String?
+  address       String?
+  role          Role      @default(USER)
+  avatar        String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  pickupRequests PickupRequest[] @relation("UserPickups")
+  tpsPickups     PickupRequest[] @relation("TPSPickups")
+  tpsProfile     TPSProfile?
+  transactions   Transaction[]
+  notifications  Notification[]
+}
+
+model TPSProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tpsName        String
+  latitude       Float?
+  longitude      Float?
+  address        String
+  phone          String?
+  operatingHours String?
+  capacity       Int?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Waste prices
+  wastePrices WastePrice[]
+}
+
+model WastePrice {
+  id            String     @id @default(cuid())
+  tpsProfileId  String
+  tpsProfile    TPSProfile @relation(fields: [tpsProfileId], references: [id], onDelete: Cascade)
+  wasteType     String
+  pricePerKg    Float
+  description   String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@unique([tpsProfileId, wasteType])
+}
+
+model PickupRequest {
+  id          String       @id @default(cuid())
+  userId      String
+  user        User         @relation("UserPickups", fields: [userId], references: [id], onDelete: Cascade)
+  tpsId       String?
+  tps         User?        @relation("TPSPickups", fields: [tpsId], references: [id])
+  
+  // Location
+  latitude    Float
+  longitude   Float
+  address     String
+  
+  // Request details
+  description String?
+  status      PickupStatus @default(PENDING)
+  scheduledAt DateTime?
+  pickedUpAt  DateTime?
+  
+  // Media (stored as JSON string for SQLite compatibility)
+  photos      String       @default("[]") // JSON array of photo URLs
+  videos      String       @default("[]") // JSON array of video URLs
+  
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  wasteItems  WasteItem[]
+  transaction Transaction?
+}
+
+model WasteItem {
+  id              String        @id @default(cuid())
+  pickupRequestId String
+  pickupRequest   PickupRequest @relation(fields: [pickupRequestId], references: [id], onDelete: Cascade)
+  wasteType       WasteType
+  estimatedWeight Float?        // in kg
+  actualWeight    Float?        // in kg (filled by TPS)
+  price           Float?        // calculated price
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Transaction {
+  id              String        @id @default(cuid())
+  pickupRequestId String        @unique
+  pickupRequest   PickupRequest @relation(fields: [pickupRequestId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
+  totalWeight     Float
+  totalPrice      Float
+  isPaid          Boolean       @default(false)
+  paidAt          DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  type      String   // pickup_accepted, pickup_completed, payment, etc.
+  createdAt DateTime @default(now())
+}

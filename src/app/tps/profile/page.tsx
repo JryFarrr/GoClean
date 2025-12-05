@@ -1,0 +1,290 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import dynamic from 'next/dynamic'
+import { 
+  Loader2, 
+  ArrowLeft, 
+  Save,
+  MapPin,
+  Phone,
+  Clock,
+  Building2
+} from 'lucide-react'
+import toast from 'react-hot-toast'
+
+const MapComponent = dynamic(() => import('@/components/MapComponent'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
+      <Loader2 className="animate-spin text-green-600" size={32} />
+    </div>
+  )
+})
+
+interface TPSProfileData {
+  tpsName: string
+  address: string
+  latitude?: number
+  longitude?: number
+  phone?: string
+  operatingHours?: string
+}
+
+export default function TPSProfilePage() {
+  const { data: session, status: authStatus } = useSession()
+  const router = useRouter()
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [profile, setProfile] = useState<TPSProfileData>({
+    tpsName: '',
+    address: '',
+    latitude: undefined,
+    longitude: undefined,
+    phone: '',
+    operatingHours: ''
+  })
+
+  useEffect(() => {
+    if (authStatus === 'unauthenticated') {
+      router.push('/login')
+    } else if (session?.user?.role !== 'TPS') {
+      router.push('/dashboard')
+    }
+  }, [authStatus, session, router])
+
+  useEffect(() => {
+    if (session?.user?.role === 'TPS') {
+      fetchProfile()
+    }
+  }, [session])
+
+  const fetchProfile = async () => {
+    try {
+      const res = await fetch('/api/tps/profile')
+      const data = await res.json()
+      if (data.data) {
+        setProfile({
+          tpsName: data.data.tpsName || '',
+          address: data.data.address || '',
+          latitude: data.data.latitude,
+          longitude: data.data.longitude,
+          phone: data.data.phone || '',
+          operatingHours: data.data.operatingHours || ''
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleLocationSelect = (lat: number, lng: number, address: string) => {
+    setProfile(prev => ({
+      ...prev,
+      latitude: lat,
+      longitude: lng,
+      address: address || prev.address
+    }))
+  }
+
+  const handleSave = async () => {
+    if (!profile.tpsName.trim()) {
+      toast.error('Nama TPS harus diisi')
+      return
+    }
+
+    if (!profile.address.trim()) {
+      toast.error('Alamat harus diisi')
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const res = await fetch('/api/tps/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profile)
+      })
+
+      if (res.ok) {
+        toast.success('Profil berhasil disimpan')
+      } else {
+        toast.error('Gagal menyimpan profil')
+      }
+    } catch (error) {
+      console.error('Error saving profile:', error)
+      toast.error('Terjadi kesalahan')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (authStatus === 'loading' || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="animate-spin text-green-600" size={48} />
+      </div>
+    )
+  }
+
+  if (!session || session.user.role !== 'TPS') {
+    return null
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      {/* Header */}
+      <div className="mb-8">
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center text-gray-600 hover:text-green-600 mb-4"
+        >
+          <ArrowLeft size={20} className="mr-2" />
+          Kembali ke Dashboard
+        </Link>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Profil TPS</h1>
+            <p className="text-gray-600 mt-2">
+              Lengkapi informasi TPS Anda agar mudah ditemukan masyarakat
+            </p>
+          </div>
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="inline-flex items-center bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50 transition"
+          >
+            {isSaving ? (
+              <Loader2 className="animate-spin mr-2" size={20} />
+            ) : (
+              <Save size={20} className="mr-2" />
+            )}
+            Simpan
+          </button>
+        </div>
+      </div>
+
+      {/* Form */}
+      <div className="space-y-6">
+        {/* TPS Name */}
+        <div className="bg-white rounded-xl shadow-md p-6">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+              <Building2 className="text-green-600" size={20} />
+            </div>
+            <div>
+              <h3 className="font-semibold">Nama TPS</h3>
+              <p className="text-sm text-gray-500">Nama resmi TPS Anda</p>
+            </div>
+          </div>
+          <input
+            type="text"
+            value={profile.tpsName}
+            onChange={(e) => setProfile(prev => ({ ...prev, tpsName: e.target.value }))}
+            className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            placeholder="Contoh: TPS Kebersihan Sejahtera"
+          />
+        </div>
+
+        {/* Address */}
+        <div className="bg-white rounded-xl shadow-md p-6">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+              <MapPin className="text-blue-600" size={20} />
+            </div>
+            <div>
+              <h3 className="font-semibold">Alamat & Lokasi</h3>
+              <p className="text-sm text-gray-500">Alamat lengkap dan titik lokasi TPS</p>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <textarea
+              value={profile.address}
+              onChange={(e) => setProfile(prev => ({ ...prev, address: e.target.value }))}
+              className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+              rows={3}
+              placeholder="Alamat lengkap TPS..."
+            />
+
+            <div className="h-64 rounded-lg overflow-hidden">
+              <MapComponent
+                onLocationSelect={handleLocationSelect}
+                initialLat={profile.latitude}
+                initialLng={profile.longitude}
+                selectable={true}
+              />
+            </div>
+
+            {profile.latitude && profile.longitude && (
+              <p className="text-sm text-gray-500">
+                Koordinat: {profile.latitude.toFixed(6)}, {profile.longitude.toFixed(6)}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Contact */}
+        <div className="bg-white rounded-xl shadow-md p-6">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+              <Phone className="text-purple-600" size={20} />
+            </div>
+            <div>
+              <h3 className="font-semibold">Kontak</h3>
+              <p className="text-sm text-gray-500">Nomor telepon yang bisa dihubungi</p>
+            </div>
+          </div>
+          <input
+            type="tel"
+            value={profile.phone || ''}
+            onChange={(e) => setProfile(prev => ({ ...prev, phone: e.target.value }))}
+            className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            placeholder="Contoh: 08123456789"
+          />
+        </div>
+
+        {/* Operating Hours */}
+        <div className="bg-white rounded-xl shadow-md p-6">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+              <Clock className="text-orange-600" size={20} />
+            </div>
+            <div>
+              <h3 className="font-semibold">Jam Operasional</h3>
+              <p className="text-sm text-gray-500">Waktu operasional TPS</p>
+            </div>
+          </div>
+          <input
+            type="text"
+            value={profile.operatingHours || ''}
+            onChange={(e) => setProfile(prev => ({ ...prev, operatingHours: e.target.value }))}
+            className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            placeholder="Contoh: Senin - Sabtu, 07:00 - 17:00"
+          />
+        </div>
+      </div>
+
+      {/* Save Button (Bottom) */}
+      <div className="mt-8 flex justify-end">
+        <button
+          onClick={handleSave}
+          disabled={isSaving}
+          className="inline-flex items-center bg-green-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50 transition"
+        >
+          {isSaving ? (
+            <Loader2 className="animate-spin mr-2" size={20} />
+          ) : (
+            <Save size={20} className="mr-2" />
+          )}
+          Simpan Profil
+        </button>
+      </div>
+    </div>
+  )
+}
