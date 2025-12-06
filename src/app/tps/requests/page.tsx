@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2, MapPin, Phone, User, Check, X, Truck, Eye } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { parseJsonArray } from '@/lib/utils'
 
 interface WasteItem {
   id: string
@@ -29,6 +30,11 @@ interface PickupRequest {
     phone?: string
   }
   wasteItems: WasteItem[]
+  transaction?: {
+    id: string
+    isPaid: boolean
+    totalPrice: number
+  }
 }
 
 const WASTE_TYPE_LABELS: Record<string, { label: string; icon: string }> = {
@@ -120,23 +126,23 @@ export default function TPSRequestsPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto px-4 py-8 bg-gradient-to-b from-green-50 to-white min-h-screen">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Permintaan Penjemputan</h1>
-        <p className="text-gray-600 mt-2">
+        <h1 className="text-3xl font-bold text-green-800">Permintaan Penjemputan</h1>
+        <p className="text-green-700 mt-2">
           Kelola permintaan penjemputan sampah dari masyarakat
         </p>
       </div>
 
       {/* Filter Tabs */}
-      <div className="bg-white rounded-xl shadow-md p-4 mb-6">
+      <div className="bg-white rounded-xl shadow-md p-4 mb-6 border border-green-100">
         <div className="flex flex-wrap gap-2">
           {[
-            { value: 'PENDING', label: 'Menunggu', color: 'yellow' },
-            { value: 'ACCEPTED', label: 'Diterima', color: 'blue' },
-            { value: 'ON_THE_WAY', label: 'Dalam Perjalanan', color: 'purple' },
-            { value: 'PICKED_UP', label: 'Dijemput', color: 'indigo' },
+            { value: 'PENDING', label: 'Menunggu', color: 'green' },
+            { value: 'ACCEPTED', label: 'Diterima', color: 'green' },
+            { value: 'ON_THE_WAY', label: 'Dalam Perjalanan', color: 'green' },
+            { value: 'PICKED_UP', label: 'Dijemput', color: 'green' },
             { value: 'COMPLETED', label: 'Selesai', color: 'green' }
           ].map((tab) => (
             <button
@@ -145,7 +151,7 @@ export default function TPSRequestsPage() {
               className={`px-4 py-2 rounded-full transition ${
                 filter === tab.value
                   ? 'bg-green-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : 'bg-green-50 text-green-700 hover:bg-green-100'
               }`}
             >
               {tab.label}
@@ -160,7 +166,7 @@ export default function TPSRequestsPage() {
           {pickups.map((pickup) => (
             <div
               key={pickup.id}
-              className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition"
+              className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition border border-green-100"
             >
               {/* User Info */}
               <div className="flex items-center justify-between mb-4">
@@ -169,11 +175,11 @@ export default function TPSRequestsPage() {
                     <User className="text-green-600" size={24} />
                   </div>
                   <div>
-                    <p className="font-semibold">{pickup.user.name}</p>
+                    <p className="font-semibold text-green-800">{pickup.user.name}</p>
                     {pickup.user.phone && (
                       <a
                         href={`tel:${pickup.user.phone}`}
-                        className="text-sm text-gray-500 hover:text-green-600 flex items-center"
+                        className="text-sm text-green-700 hover:text-green-600 flex items-center"
                       >
                         <Phone size={14} className="mr-1" />
                         {pickup.user.phone}
@@ -181,7 +187,7 @@ export default function TPSRequestsPage() {
                     )}
                   </div>
                 </div>
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-green-600">
                   {new Date(pickup.createdAt).toLocaleDateString('id-ID', {
                     day: 'numeric',
                     month: 'short'
@@ -191,16 +197,34 @@ export default function TPSRequestsPage() {
 
               {/* Location */}
               <div className="flex items-start space-x-2 mb-4">
-                <MapPin size={18} className="text-gray-400 mt-0.5 flex-shrink-0" />
-                <p className="text-gray-700 text-sm">{pickup.address}</p>
+                <MapPin size={18} className="text-green-500 mt-0.5 shrink-0" />
+                <p className="text-green-700 text-sm">{pickup.address}</p>
               </div>
+
+              {/* Transaction Status */}
+              {pickup.transaction && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800 mb-1">
+                    💰 Transaksi: <span className="font-semibold">Rp {pickup.transaction.totalPrice.toLocaleString('id-ID')}</span>
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      pickup.transaction.isPaid
+                        ? 'bg-green-200 text-green-800'
+                        : 'bg-orange-200 text-orange-800'
+                    }`}>
+                      {pickup.transaction.isPaid ? '✓ Pembayaran Terverifikasi' : '⏳ Menunggu Verifikasi User'}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Waste Items */}
               <div className="flex flex-wrap gap-2 mb-4">
                 {pickup.wasteItems.map((item) => (
                   <span
                     key={item.id}
-                    className="inline-flex items-center px-2 py-1 bg-gray-100 rounded text-xs"
+                    className="inline-flex items-center px-2 py-1 bg-green-50 rounded text-xs text-green-700"
                   >
                     {WASTE_TYPE_LABELS[item.wasteType]?.icon}{' '}
                     {WASTE_TYPE_LABELS[item.wasteType]?.label} ({item.estimatedWeight}kg)
@@ -209,9 +233,9 @@ export default function TPSRequestsPage() {
               </div>
 
               {/* Photos */}
-              {pickup.photos.length > 0 && (
+              {parseJsonArray(pickup.photos).length > 0 && (
                 <div className="flex space-x-2 mb-4 overflow-x-auto">
-                  {pickup.photos.slice(0, 3).map((photo, i) => (
+                  {parseJsonArray(pickup.photos).slice(0, 3).map((photo, i) => (
                     <img
                       key={i}
                       src={photo}
@@ -246,10 +270,10 @@ export default function TPSRequestsPage() {
                   <>
                     <button
                       onClick={() => handleStatusUpdate(pickup.id, 'ON_THE_WAY')}
-                      className="flex-1 flex items-center justify-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+                      className="flex-1 flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
                     >
                       <Truck size={18} className="mr-2" />
-                      Berangkat
+                      Berangkat Jemput
                     </button>
                     <button
                       onClick={() => openGoogleMaps(pickup.latitude, pickup.longitude)}
@@ -265,10 +289,10 @@ export default function TPSRequestsPage() {
                   <>
                     <button
                       onClick={() => handleStatusUpdate(pickup.id, 'PICKED_UP')}
-                      className="flex-1 flex items-center justify-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                      className="flex-1 flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
                     >
                       <Check size={18} className="mr-2" />
-                      Sudah Dijemput
+                      Sudah Sampai di Lokasi
                     </button>
                     <button
                       onClick={() => openGoogleMaps(pickup.latitude, pickup.longitude)}
@@ -280,17 +304,25 @@ export default function TPSRequestsPage() {
                 )}
 
                 {pickup.status === 'PICKED_UP' && (
-                  <Link
-                    href={`/tps/transaction/${pickup.id}`}
-                    className="flex-1 flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-                  >
-                    Input Transaksi
-                  </Link>
+                  <>
+                    {!pickup.transaction ? (
+                      <Link
+                        href={`/tps/transaction/${pickup.id}`}
+                        className="flex-1 flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                      >
+                        Input Transaksi & Bayar
+                      </Link>
+                    ) : (
+                      <div className="flex-1 p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
+                        <p className="text-blue-700 font-medium text-sm">💰 Menunggu verifikasi user</p>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 <Link
                   href={`/pickup/${pickup.id}`}
-                  className="flex items-center justify-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+                  className="flex items-center justify-center px-4 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition"
                 >
                   <Eye size={18} />
                 </Link>
@@ -299,12 +331,12 @@ export default function TPSRequestsPage() {
           ))}
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-md p-12 text-center">
+        <div className="bg-white rounded-xl shadow-md p-12 text-center border border-green-100">
           <div className="text-6xl mb-4">📭</div>
-          <h3 className="text-xl font-semibold text-gray-700 mb-2">
+          <h3 className="text-xl font-semibold text-green-800 mb-2">
             Tidak Ada Permintaan
           </h3>
-          <p className="text-gray-500">
+          <p className="text-green-600">
             Belum ada permintaan penjemputan dengan status ini
           </p>
         </div>

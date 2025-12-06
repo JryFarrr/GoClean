@@ -88,61 +88,61 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8 bg-gradient-to-b from-green-50 to-white min-h-screen">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-        <p className="text-gray-600 mt-2">
+        <h1 className="text-3xl font-bold text-green-800">Admin Dashboard</h1>
+        <p className="text-green-700 mt-2">
           Pantau dan kelola seluruh aktivitas GoClean
         </p>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-xl p-6 shadow-md">
+        <div className="bg-white rounded-xl p-6 shadow-md border border-green-100">
           <div className="flex items-center justify-between mb-4">
-            <Users className="text-blue-500" size={24} />
+            <Users className="text-green-600" size={24} />
           </div>
-          <p className="text-3xl font-bold">{data?.stats.totalUsers || 0}</p>
-          <p className="text-gray-500 text-sm">Total Users</p>
+          <p className="text-3xl font-bold text-green-800">{data?.stats.totalUsers || 0}</p>
+          <p className="text-green-700 text-sm">Total Users</p>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-md">
+        <div className="bg-white rounded-xl p-6 shadow-md border border-green-100">
           <div className="flex items-center justify-between mb-4">
-            <Truck className="text-green-500" size={24} />
+            <Truck className="text-green-600" size={24} />
           </div>
-          <p className="text-3xl font-bold">{data?.stats.totalTPS || 0}</p>
-          <p className="text-gray-500 text-sm">Total TPS</p>
+          <p className="text-3xl font-bold text-green-800">{data?.stats.totalTPS || 0}</p>
+          <p className="text-green-700 text-sm">Total TPS</p>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-md">
+        <div className="bg-white rounded-xl p-6 shadow-md border border-green-100">
           <div className="flex items-center justify-between mb-4">
-            <MapPin className="text-yellow-500" size={24} />
+            <MapPin className="text-green-600" size={24} />
           </div>
-          <p className="text-3xl font-bold">{data?.stats.totalPickups || 0}</p>
-          <p className="text-gray-500 text-sm">Total Penjemputan</p>
+          <p className="text-3xl font-bold text-green-800">{data?.stats.totalPickups || 0}</p>
+          <p className="text-green-700 text-sm">Total Penjemputan</p>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-md">
+        <div className="bg-white rounded-xl p-6 shadow-md border border-green-100">
           <div className="flex items-center justify-between mb-4">
-            <DollarSign className="text-purple-500" size={24} />
+            <DollarSign className="text-green-600" size={24} />
           </div>
-          <p className="text-3xl font-bold">
+          <p className="text-3xl font-bold text-green-800">
             Rp {(data?.stats.totalRevenue || 0).toLocaleString('id-ID')}
           </p>
-          <p className="text-gray-500 text-sm">Total Pendapatan</p>
+          <p className="text-green-700 text-sm">Total Pendapatan</p>
         </div>
       </div>
 
       {/* Additional Stats */}
       <div className="grid md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-yellow-50 rounded-xl p-6">
+        <div className="bg-green-50 rounded-xl p-6">
           <div className="flex items-center space-x-3">
-            <Clock className="text-yellow-600" size={24} />
+            <Clock className="text-green-600" size={24} />
             <div>
-              <p className="text-2xl font-bold text-yellow-800">
+              <p className="text-2xl font-bold text-green-800">
                 {data?.stats.pendingPickups || 0}
               </p>
-              <p className="text-yellow-600">Menunggu Penjemputan</p>
+              <p className="text-green-700">Menunggu Penjemputan</p>
             </div>
           </div>
         </div>
@@ -154,19 +154,19 @@ export default function AdminDashboardPage() {
               <p className="text-2xl font-bold text-green-800">
                 {data?.stats.completedPickups || 0}
               </p>
-              <p className="text-green-600">Selesai</p>
+              <p className="text-green-700">Selesai</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-blue-50 rounded-xl p-6">
+        <div className="bg-green-50 rounded-xl p-6">
           <div className="flex items-center space-x-3">
-            <TrendingUp className="text-blue-600" size={24} />
+            <TrendingUp className="text-green-600" size={24} />
             <div>
-              <p className="text-2xl font-bold text-blue-800">
+              <p className="text-2xl font-bold text-green-800">
                 {data?.stats.totalTransactions || 0}
               </p>
-              <p className="text-blue-600">Total Transaksi</p>
+              <p className="text-green-700">Total Transaksi</p>
             </div>
           </div>
         </div>
@@ -176,56 +176,56 @@ export default function AdminDashboardPage() {
       <div className="grid md:grid-cols-4 gap-4 mb-8">
         <Link
           href="/admin/users"
-          className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition text-center"
+          className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition text-center border border-green-100"
         >
-          <Users className="mx-auto mb-2 text-blue-600" size={32} />
-          <p className="font-semibold">Kelola Users</p>
+          <Users className="mx-auto mb-2 text-green-600" size={32} />
+          <p className="font-semibold text-green-800">Kelola Users</p>
         </Link>
         <Link
           href="/admin/tps"
-          className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition text-center"
+          className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition text-center border border-green-100"
         >
           <Truck className="mx-auto mb-2 text-green-600" size={32} />
-          <p className="font-semibold">Kelola TPS</p>
+          <p className="font-semibold text-green-800">Kelola TPS</p>
         </Link>
         <Link
           href="/admin/pickups"
-          className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition text-center"
+          className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition text-center border border-green-100"
         >
-          <MapPin className="mx-auto mb-2 text-yellow-600" size={32} />
-          <p className="font-semibold">Penjemputan</p>
+          <MapPin className="mx-auto mb-2 text-green-600" size={32} />
+          <p className="font-semibold text-green-800">Penjemputan</p>
         </Link>
         <Link
           href="/admin/transactions"
-          className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition text-center"
+          className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition text-center border border-green-100"
         >
-          <DollarSign className="mx-auto mb-2 text-purple-600" size={32} />
-          <p className="font-semibold">Transaksi</p>
+          <DollarSign className="mx-auto mb-2 text-green-600" size={32} />
+          <p className="font-semibold text-green-800">Transaksi</p>
         </Link>
       </div>
 
       {/* Recent Activity */}
       <div className="grid md:grid-cols-2 gap-6">
         {/* Recent Pickups */}
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-bold mb-4">Penjemputan Terbaru</h2>
+        <div className="bg-white rounded-xl shadow-md p-6 border border-green-100">
+          <h2 className="text-xl font-bold mb-4 text-green-800">Penjemputan Terbaru</h2>
           {data?.recentPickups && data.recentPickups.length > 0 ? (
             <div className="space-y-3">
               {data.recentPickups.map((pickup) => (
                 <div
                   key={pickup.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                  className="flex items-center justify-between p-3 bg-green-50 rounded-lg"
                 >
                   <div>
-                    <p className="font-medium">{pickup.user.name}</p>
-                    <p className="text-sm text-gray-500">
+                    <p className="font-medium text-green-800">{pickup.user.name}</p>
+                    <p className="text-sm text-green-700">
                       {new Date(pickup.createdAt).toLocaleDateString('id-ID')}
                     </p>
                   </div>
-                  <span className={`px-2 py-1 rounded text-xs ${
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${
                     pickup.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
                     pickup.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
-                    'bg-blue-100 text-blue-800'
+                    'bg-green-100 text-green-700'
                   }`}>
                     {pickup.status}
                   </span>
@@ -233,23 +233,23 @@ export default function AdminDashboardPage() {
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-4">Tidak ada data</p>
+            <p className="text-green-700 text-center py-4">Tidak ada data</p>
           )}
         </div>
 
         {/* Recent Transactions */}
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-bold mb-4">Transaksi Terbaru</h2>
+        <div className="bg-white rounded-xl shadow-md p-6 border border-green-100">
+          <h2 className="text-xl font-bold mb-4 text-green-800">Transaksi Terbaru</h2>
           {data?.recentTransactions && data.recentTransactions.length > 0 ? (
             <div className="space-y-3">
               {data.recentTransactions.map((transaction) => (
                 <div
                   key={transaction.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                  className="flex items-center justify-between p-3 bg-green-50 rounded-lg"
                 >
                   <div>
-                    <p className="font-medium">{transaction.user.name}</p>
-                    <p className="text-sm text-gray-500">
+                    <p className="font-medium text-green-800">{transaction.user.name}</p>
+                    <p className="text-sm text-green-700">
                       {new Date(transaction.createdAt).toLocaleDateString('id-ID')}
                     </p>
                   </div>
@@ -260,7 +260,7 @@ export default function AdminDashboardPage() {
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-4">Tidak ada data</p>
+            <p className="text-green-700 text-center py-4">Tidak ada data</p>
           )}
         </div>
       </div>

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2, MapPin, Calendar, ArrowLeft, Eye, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { parseJsonArray } from '@/lib/utils'
 
 interface WasteItem {
   id: string
@@ -35,9 +36,9 @@ interface PickupRequest {
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   PENDING: { label: 'Menunggu', color: 'bg-yellow-100 text-yellow-800' },
-  ACCEPTED: { label: 'Diterima', color: 'bg-blue-100 text-blue-800' },
-  ON_THE_WAY: { label: 'Dalam Perjalanan', color: 'bg-purple-100 text-purple-800' },
-  PICKED_UP: { label: 'Dijemput', color: 'bg-indigo-100 text-indigo-800' },
+  ACCEPTED: { label: 'Diterima', color: 'bg-green-100 text-green-800' },
+  ON_THE_WAY: { label: 'Dalam Perjalanan', color: 'bg-green-100 text-green-700' },
+  PICKED_UP: { label: 'Dijemput', color: 'bg-green-200 text-green-800' },
   COMPLETED: { label: 'Selesai', color: 'bg-green-100 text-green-800' },
   CANCELLED: { label: 'Dibatalkan', color: 'bg-red-100 text-red-800' }
 }
@@ -120,20 +121,20 @@ export default function PickupHistoryPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto px-4 py-8 bg-gradient-to-b from-green-50 to-white min-h-screen">
       {/* Header */}
       <div className="mb-8">
         <Link
           href="/dashboard"
-          className="inline-flex items-center text-gray-600 hover:text-green-600 mb-4"
+          className="inline-flex items-center text-green-700 hover:text-green-600 mb-4"
         >
           <ArrowLeft size={20} className="mr-2" />
           Kembali ke Dashboard
         </Link>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Riwayat Penjemputan</h1>
-            <p className="text-gray-600 mt-2">
+            <h1 className="text-3xl font-bold text-green-800">Riwayat Penjemputan</h1>
+            <p className="text-green-700 mt-2">
               Lihat semua permintaan penjemputan sampah Anda
             </p>
           </div>
@@ -147,14 +148,14 @@ export default function PickupHistoryPage() {
       </div>
 
       {/* Filter */}
-      <div className="bg-white rounded-xl shadow-md p-4 mb-6">
+      <div className="bg-white rounded-xl shadow-md p-4 mb-6 border border-green-100">
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setSelectedStatus('')}
             className={`px-4 py-2 rounded-full transition ${
               selectedStatus === ''
                 ? 'bg-green-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                : 'bg-green-50 text-green-700 hover:bg-green-100'
             }`}
           >
             Semua
@@ -166,7 +167,7 @@ export default function PickupHistoryPage() {
               className={`px-4 py-2 rounded-full transition ${
                 selectedStatus === key
                   ? 'bg-green-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : 'bg-green-50 text-green-700 hover:bg-green-100'
               }`}
             >
               {label}
@@ -181,7 +182,7 @@ export default function PickupHistoryPage() {
           {pickups.map((pickup) => (
             <div
               key={pickup.id}
-              className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition"
+              className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition border border-green-100"
             >
               <div className="flex flex-col md:flex-row md:items-start md:justify-between">
                 {/* Left Content */}
@@ -190,7 +191,7 @@ export default function PickupHistoryPage() {
                     <span className={`px-3 py-1 rounded-full text-sm ${STATUS_LABELS[pickup.status]?.color || 'bg-gray-100'}`}>
                       {STATUS_LABELS[pickup.status]?.label || pickup.status}
                     </span>
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-green-600">
                       {new Date(pickup.createdAt).toLocaleDateString('id-ID', {
                         day: 'numeric',
                         month: 'long',
@@ -202,14 +203,14 @@ export default function PickupHistoryPage() {
                   </div>
 
                   <div className="mt-4 flex items-start space-x-2">
-                    <MapPin size={18} className="text-gray-400 mt-0.5 flex-shrink-0" />
-                    <p className="text-gray-700">{pickup.address}</p>
+                    <MapPin size={18} className="text-green-500 mt-0.5 flex-shrink-0" />
+                    <p className="text-green-700">{pickup.address}</p>
                   </div>
 
                   {pickup.scheduledAt && (
                     <div className="mt-2 flex items-center space-x-2">
-                      <Calendar size={18} className="text-gray-400" />
-                      <p className="text-sm text-gray-600">
+                      <Calendar size={18} className="text-green-500" />
+                      <p className="text-sm text-green-700">
                         Dijadwalkan:{' '}
                         {new Date(pickup.scheduledAt).toLocaleDateString('id-ID', {
                           day: 'numeric',
@@ -227,13 +228,13 @@ export default function PickupHistoryPage() {
                     {pickup.wasteItems.map((item) => (
                       <span
                         key={item.id}
-                        className="inline-flex items-center px-3 py-1 bg-gray-100 rounded-full text-sm"
+                        className="inline-flex items-center px-3 py-1 bg-green-50 rounded-full text-sm"
                       >
                         <span className="mr-1">
                           {WASTE_TYPE_LABELS[item.wasteType]?.icon || '📦'}
                         </span>
                         {WASTE_TYPE_LABELS[item.wasteType]?.label || item.wasteType}
-                        <span className="ml-1 text-gray-500">
+                        <span className="ml-1 text-green-600">
                           ({item.estimatedWeight} kg)
                         </span>
                       </span>
@@ -241,7 +242,7 @@ export default function PickupHistoryPage() {
                   </div>
 
                   {pickup.tps && (
-                    <div className="mt-4 text-sm text-gray-600">
+                    <div className="mt-4 text-sm text-green-700">
                       <span className="font-medium">TPS:</span>{' '}
                       {pickup.tps.tpsProfile?.tpsName || pickup.tps.name}
                     </div>
@@ -252,7 +253,7 @@ export default function PickupHistoryPage() {
                 <div className="mt-4 md:mt-0 md:ml-6 flex md:flex-col space-x-2 md:space-x-0 md:space-y-2">
                   <Link
                     href={`/pickup/${pickup.id}`}
-                    className="flex items-center justify-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+                    className="flex items-center justify-center px-4 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition"
                   >
                     <Eye size={18} className="mr-2" />
                     Detail
@@ -270,9 +271,9 @@ export default function PickupHistoryPage() {
               </div>
 
               {/* Photos Preview */}
-              {pickup.photos.length > 0 && (
+              {parseJsonArray(pickup.photos).length > 0 && (
                 <div className="mt-4 flex space-x-2 overflow-x-auto">
-                  {pickup.photos.slice(0, 4).map((photo, i) => (
+                  {parseJsonArray(pickup.photos).slice(0, 4).map((photo, i) => (
                     <img
                       key={i}
                       src={photo}
@@ -280,9 +281,9 @@ export default function PickupHistoryPage() {
                       className="w-20 h-20 object-cover rounded-lg"
                     />
                   ))}
-                  {pickup.photos.length > 4 && (
-                    <div className="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center text-gray-500">
-                      +{pickup.photos.length - 4}
+                  {parseJsonArray(pickup.photos).length > 4 && (
+                    <div className="w-20 h-20 bg-green-100 rounded-lg flex items-center justify-center text-green-700">
+                      +{parseJsonArray(pickup.photos).length - 4}
                     </div>
                   )}
                 </div>
@@ -291,12 +292,12 @@ export default function PickupHistoryPage() {
           ))}
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-md p-12 text-center">
+        <div className="bg-white rounded-xl shadow-md p-12 text-center border border-green-100">
           <div className="text-6xl mb-4">📭</div>
-          <h3 className="text-xl font-semibold text-gray-700 mb-2">
+          <h3 className="text-xl font-semibold text-green-800 mb-2">
             Belum Ada Permintaan
           </h3>
-          <p className="text-gray-500 mb-6">
+          <p className="text-green-600 mb-6">
             Anda belum membuat permintaan penjemputan sampah
           </p>
           <Link

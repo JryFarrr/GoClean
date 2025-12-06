@@ -118,21 +118,21 @@ export default function RegisterPage() {
                   }`}
                 >
                   <div className="text-4xl mb-2">👨‍👩‍👧‍👦</div>
-                  <p className="font-semibold">Masyarakat</p>
-                  <p className="text-sm text-gray-500">Untuk penggunaan personal</p>
+                  <p className="font-semibold text-gray-800">Masyarakat</p>
+                  <p className="text-sm text-gray-600">Untuk penggunaan personal</p>
                 </button>
                 <button
                   type="button"
                   onClick={() => setRole('TPS')}
                   className={`p-6 rounded-xl border-2 transition text-center ${
                     role === 'TPS'
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-blue-300'
+                      ? 'border-green-500 bg-green-50'
+                      : 'border-gray-200 hover:border-green-300'
                   }`}
                 >
                   <div className="text-4xl mb-2">🏭</div>
-                  <p className="font-semibold">Pihak TPS</p>
-                  <p className="text-sm text-gray-500">Untuk pengelola TPS</p>
+                  <p className="font-semibold text-gray-800">Pihak TPS</p>
+                  <p className="text-sm text-gray-600">Untuk pengelola TPS</p>
                 </button>
               </div>
               <button

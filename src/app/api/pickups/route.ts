@@ -151,8 +151,15 @@ export async function GET(req: NextRequest) {
       prisma.pickupRequest.count({ where })
     ])
 
+    // Parse photos and videos from JSON string to array
+    const parsedPickupRequests = pickupRequests.map(pickup => ({
+      ...pickup,
+      photos: typeof pickup.photos === 'string' ? JSON.parse(pickup.photos || '[]') : pickup.photos,
+      videos: typeof pickup.videos === 'string' ? JSON.parse(pickup.videos || '[]') : pickup.videos
+    }))
+
     return NextResponse.json({
-      data: pickupRequests,
+      data: parsedPickupRequests,
       pagination: {
         page,
         limit,

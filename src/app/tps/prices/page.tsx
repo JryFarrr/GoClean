@@ -28,13 +28,13 @@ interface WastePrice {
 }
 
 const WASTE_TYPES = [
-  { value: 'ORGANIC', label: 'Organik', icon: LeafyGreen, color: 'bg-green-500' },
-  { value: 'PLASTIC', label: 'Plastik', icon: Package, color: 'bg-blue-500' },
-  { value: 'PAPER', label: 'Kertas', icon: FileText, color: 'bg-yellow-500' },
-  { value: 'METAL', label: 'Logam', icon: Cog, color: 'bg-gray-500' },
-  { value: 'GLASS', label: 'Kaca', icon: GlassWater, color: 'bg-purple-500' },
-  { value: 'ELECTRONIC', label: 'Elektronik', icon: Smartphone, color: 'bg-red-500' },
-  { value: 'OTHER', label: 'Lainnya', icon: Trash2, color: 'bg-orange-500' }
+  { value: 'ORGANIC', label: 'Organik', icon: LeafyGreen, color: 'bg-green-600' },
+  { value: 'PLASTIC', label: 'Plastik', icon: Package, color: 'bg-green-500' },
+  { value: 'PAPER', label: 'Kertas', icon: FileText, color: 'bg-green-500' },
+  { value: 'METAL', label: 'Logam', icon: Cog, color: 'bg-green-600' },
+  { value: 'GLASS', label: 'Kaca', icon: GlassWater, color: 'bg-green-500' },
+  { value: 'ELECTRONIC', label: 'Elektronik', icon: Smartphone, color: 'bg-green-600' },
+  { value: 'OTHER', label: 'Lainnya', icon: Trash2, color: 'bg-green-500' }
 ]
 
 export default function TPSPricesPage() {
@@ -134,20 +134,20 @@ export default function TPSPricesPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-4xl mx-auto px-4 py-8 bg-gradient-to-b from-green-50 to-white min-h-screen">
       {/* Header */}
       <div className="mb-8">
         <Link
           href="/dashboard"
-          className="inline-flex items-center text-gray-600 hover:text-green-600 mb-4"
+          className="inline-flex items-center text-green-700 hover:text-green-600 mb-4"
         >
           <ArrowLeft size={20} className="mr-2" />
           Kembali ke Dashboard
         </Link>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Harga Sampah</h1>
-            <p className="text-gray-600 mt-2">
+            <h1 className="text-3xl font-bold text-green-800">Harga Sampah</h1>
+            <p className="text-green-700 mt-2">
               Atur harga pembelian sampah per kilogram
             </p>
           </div>
@@ -189,7 +189,7 @@ export default function TPSPricesPage() {
           return (
             <div
               key={value}
-              className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition"
+              className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition border border-green-100"
             >
               <div className="flex items-center space-x-4">
                 {/* Icon */}
@@ -200,15 +200,15 @@ export default function TPSPricesPage() {
                 {/* Content */}
                 <div className="flex-1 grid md:grid-cols-2 gap-4">
                   <div>
-                    <h3 className="font-semibold text-lg text-gray-800">{label}</h3>
-                    <p className="text-sm text-gray-500">
+                    <h3 className="font-semibold text-lg text-green-800">{label}</h3>
+                    <p className="text-sm text-green-600">
                       {existingPrice ? 'Harga saat ini: Rp ' + existingPrice.pricePerKg.toLocaleString('id-ID') + '/kg' : 'Belum diatur'}
                     </p>
                   </div>
 
                   <div className="flex items-center space-x-4">
                     <div className="flex-1">
-                      <label className="block text-sm text-gray-500 mb-1">
+                      <label className="block text-sm text-green-700 mb-1">
                         Harga per kg (Rp)
                       </label>
                       <input
@@ -226,7 +226,7 @@ export default function TPSPricesPage() {
 
               {/* Description */}
               <div className="mt-4 pl-18">
-                <label className="block text-sm text-gray-500 mb-1">
+                <label className="block text-sm text-green-700 mb-1">
                   Keterangan (opsional)
                 </label>
                 <input

@@ -25,7 +25,9 @@ export async function GET(
             name: true,
             email: true,
             phone: true,
-            address: true
+            address: true,
+            gopayNumber: true,
+            whatsappNumber: true
           }
         },
         tps: {
@@ -45,7 +47,14 @@ export async function GET(
       return NextResponse.json({ error: 'Data tidak ditemukan' }, { status: 404 })
     }
 
-    return NextResponse.json({ data: pickupRequest })
+    // Parse photos and videos from JSON string to array
+    const parsedPickupRequest = {
+      ...pickupRequest,
+      photos: typeof pickupRequest.photos === 'string' ? JSON.parse(pickupRequest.photos || '[]') : pickupRequest.photos,
+      videos: typeof pickupRequest.videos === 'string' ? JSON.parse(pickupRequest.videos || '[]') : pickupRequest.videos
+    }
+
+    return NextResponse.json({ data: parsedPickupRequest })
   } catch (error) {
     console.error('Get pickup detail error:', error)
     return NextResponse.json(
@@ -186,7 +195,14 @@ export async function PATCH(
       }
     }
 
-    return NextResponse.json(updatedPickup)
+    // Parse photos and videos from JSON string to array
+    const parsedUpdatedPickup = {
+      ...updatedPickup,
+      photos: typeof updatedPickup.photos === 'string' ? JSON.parse(updatedPickup.photos || '[]') : updatedPickup.photos,
+      videos: typeof updatedPickup.videos === 'string' ? JSON.parse(updatedPickup.videos || '[]') : updatedPickup.videos
+    }
+
+    return NextResponse.json({ data: parsedUpdatedPickup })
   } catch (error) {
     console.error('Update pickup error:', error)
     return NextResponse.json(

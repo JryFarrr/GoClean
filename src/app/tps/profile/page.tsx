@@ -12,7 +12,8 @@ import {
   MapPin,
   Phone,
   Clock,
-  Building2
+  Building2,
+  Smartphone
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -31,6 +32,8 @@ interface TPSProfileData {
   latitude?: number
   longitude?: number
   phone?: string
+  gopayNumber?: string
+  whatsappNumber?: string
   operatingHours?: string
 }
 
@@ -45,6 +48,8 @@ export default function TPSProfilePage() {
     latitude: undefined,
     longitude: undefined,
     phone: '',
+    gopayNumber: '',
+    whatsappNumber: '',
     operatingHours: ''
   })
 
@@ -73,6 +78,8 @@ export default function TPSProfilePage() {
           latitude: data.data.latitude,
           longitude: data.data.longitude,
           phone: data.data.phone || '',
+          gopayNumber: data.data.gopayNumber || '',
+          whatsappNumber: data.data.whatsappNumber || '',
           operatingHours: data.data.operatingHours || ''
         })
       }
@@ -137,20 +144,20 @@ export default function TPSProfilePage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-4xl mx-auto px-4 py-8 bg-gradient-to-b from-green-50 to-white min-h-screen">
       {/* Header */}
       <div className="mb-8">
         <Link
           href="/dashboard"
-          className="inline-flex items-center text-gray-600 hover:text-green-600 mb-4"
+          className="inline-flex items-center text-green-700 hover:text-green-600 mb-4"
         >
           <ArrowLeft size={20} className="mr-2" />
           Kembali ke Dashboard
         </Link>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Profil TPS</h1>
-            <p className="text-gray-600 mt-2">
+            <h1 className="text-3xl font-bold text-green-800">Profil TPS</h1>
+            <p className="text-green-700 mt-2">
               Lengkapi informasi TPS Anda agar mudah ditemukan masyarakat
             </p>
           </div>
@@ -172,14 +179,14 @@ export default function TPSProfilePage() {
       {/* Form */}
       <div className="space-y-6">
         {/* TPS Name */}
-        <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="bg-white rounded-xl shadow-md p-6 border border-green-100">
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
               <Building2 className="text-green-600" size={20} />
             </div>
             <div>
-              <h3 className="font-semibold">Nama TPS</h3>
-              <p className="text-sm text-gray-500">Nama resmi TPS Anda</p>
+              <h3 className="font-semibold text-green-800">Nama TPS</h3>
+              <p className="text-sm text-green-600">Nama resmi TPS Anda</p>
             </div>
           </div>
           <input
@@ -192,14 +199,14 @@ export default function TPSProfilePage() {
         </div>
 
         {/* Address */}
-        <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="bg-white rounded-xl shadow-md p-6 border border-green-100">
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
               <MapPin className="text-blue-600" size={20} />
             </div>
             <div>
-              <h3 className="font-semibold">Alamat & Lokasi</h3>
-              <p className="text-sm text-gray-500">Alamat lengkap dan titik lokasi TPS</p>
+              <h3 className="font-semibold text-green-800">Alamat & Lokasi</h3>
+              <p className="text-sm text-green-600">Alamat lengkap dan titik lokasi TPS</p>
             </div>
           </div>
           
@@ -222,7 +229,7 @@ export default function TPSProfilePage() {
             </div>
 
             {profile.latitude && profile.longitude && (
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-green-600">
                 Koordinat: {profile.latitude.toFixed(6)}, {profile.longitude.toFixed(6)}
               </p>
             )}
@@ -230,14 +237,14 @@ export default function TPSProfilePage() {
         </div>
 
         {/* Contact */}
-        <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="bg-white rounded-xl shadow-md p-6 border border-green-100">
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
               <Phone className="text-purple-600" size={20} />
             </div>
             <div>
-              <h3 className="font-semibold">Kontak</h3>
-              <p className="text-sm text-gray-500">Nomor telepon yang bisa dihubungi</p>
+              <h3 className="font-semibold text-green-800">Kontak</h3>
+              <p className="text-sm text-green-600">Nomor telepon yang bisa dihubungi</p>
             </div>
           </div>
           <input
@@ -249,15 +256,57 @@ export default function TPSProfilePage() {
           />
         </div>
 
+        {/* WhatsApp Number */}
+        <div className="bg-white rounded-xl shadow-md p-6 border border-green-100">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+              <Smartphone className="text-green-600" size={20} />
+            </div>
+            <div>
+              <h3 className="font-semibold text-green-800">Nomor WhatsApp</h3>
+              <p className="text-sm text-green-600">Nomor untuk komunikasi dengan pengguna</p>
+            </div>
+          </div>
+          <input
+            type="tel"
+            value={profile.whatsappNumber || ''}
+            onChange={(e) => setProfile(prev => ({ ...prev, whatsappNumber: e.target.value }))}
+            className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            placeholder="Contoh: +6281234567890"
+          />
+          <p className="text-xs text-gray-500 mt-2">Format: +62812345678 (dengan kode negara)</p>
+        </div>
+
+        {/* Gopay Number */}
+        <div className="bg-white rounded-xl shadow-md p-6 border border-green-100">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+              <Smartphone className="text-blue-600" size={20} />
+            </div>
+            <div>
+              <h3 className="font-semibold text-green-800">📱 Nomor Gopay</h3>
+              <p className="text-sm text-green-600">Nomor untuk menerima pembayaran dari pengguna</p>
+            </div>
+          </div>
+          <input
+            type="tel"
+            value={profile.gopayNumber || ''}
+            onChange={(e) => setProfile(prev => ({ ...prev, gopayNumber: e.target.value }))}
+            className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            placeholder="Nomor Gopay untuk menerima pembayaran"
+          />
+          <p className="text-xs text-gray-500 mt-2">Opsional: Gunakan ini jika TPS ingin menerima pembayaran langsung</p>
+        </div>
+
         {/* Operating Hours */}
-        <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="bg-white rounded-xl shadow-md p-6 border border-green-100">
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
               <Clock className="text-orange-600" size={20} />
             </div>
             <div>
-              <h3 className="font-semibold">Jam Operasional</h3>
-              <p className="text-sm text-gray-500">Waktu operasional TPS</p>
+              <h3 className="font-semibold text-green-800">Jam Operasional</h3>
+              <p className="text-sm text-green-600">Waktu operasional TPS</p>
             </div>
           </div>
           <input

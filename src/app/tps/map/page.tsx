@@ -89,23 +89,23 @@ export default function TPSMapPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8 bg-gradient-to-b from-green-50 to-white min-h-screen">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Peta Lokasi Penjemputan</h1>
-        <p className="text-gray-600 mt-2">
+        <h1 className="text-3xl font-bold text-green-800">Peta Lokasi Penjemputan</h1>
+        <p className="text-green-700 mt-2">
           Lihat semua lokasi permintaan penjemputan yang menunggu
         </p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-md p-4">
+      <div className="bg-white rounded-xl shadow-md p-4 border border-green-100">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <div className="flex items-center">
               <div className="w-4 h-4 bg-yellow-500 rounded-full mr-2"></div>
-              <span className="text-sm text-gray-600">Menunggu Penjemputan</span>
+              <span className="text-sm text-green-700">Menunggu Penjemputan</span>
             </div>
           </div>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-green-600">
             Total: {markers.length} lokasi
           </p>
         </div>
@@ -118,18 +118,18 @@ export default function TPSMapPage() {
       </div>
 
       {/* Location List */}
-      <div className="mt-6 bg-white rounded-xl shadow-md p-6">
-        <h2 className="text-xl font-bold mb-4">Daftar Lokasi</h2>
+      <div className="mt-6 bg-white rounded-xl shadow-md p-6 border border-green-100">
+        <h2 className="text-xl font-bold mb-4 text-green-800">Daftar Lokasi</h2>
         {markers.length > 0 ? (
           <div className="space-y-3">
             {markers.map((marker) => (
               <div
                 key={marker.id}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+                className="flex items-center justify-between p-4 bg-green-50 rounded-lg hover:bg-green-100 transition"
               >
                 <div>
-                  <p className="font-semibold">{marker.title}</p>
-                  <p className="text-sm text-gray-600">{marker.description}</p>
+                  <p className="font-semibold text-green-800">{marker.title}</p>
+                  <p className="text-sm text-green-700">{marker.description}</p>
                 </div>
                 <button
                   onClick={() => window.open(
@@ -144,7 +144,7 @@ export default function TPSMapPage() {
             ))}
           </div>
         ) : (
-          <p className="text-center text-gray-500 py-8">
+          <p className="text-center text-green-600 py-8">
             Tidak ada lokasi penjemputan
           </p>
         )}

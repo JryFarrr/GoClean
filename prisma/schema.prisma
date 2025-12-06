@@ -42,6 +42,8 @@ model User {
   name          String
   phone         String?
   address       String?
+  gopayNumber   String?
+  whatsappNumber String?
   role          Role      @default(USER)
   avatar        String?
   createdAt     DateTime  @default(now())
@@ -64,8 +66,11 @@ model TPSProfile {
   longitude      Float?
   address        String
   phone          String?
+  gopayNumber    String?
+  whatsappNumber String?
   operatingHours String?
   capacity       Int?
+  description    String?
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt

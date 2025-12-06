@@ -12,7 +12,11 @@ import {
   CheckCircle, 
   AlertCircle,
   Plus,
-  ArrowRight
+  ArrowRight,
+  Phone,
+  MessageCircle,
+  User as UserIcon,
+  Edit
 } from 'lucide-react'
 
 interface DashboardStats {
@@ -27,10 +31,29 @@ interface DashboardStats {
   }>
 }
 
+interface UserProfile {
+  name: string
+  email: string
+  phone?: string
+  whatsappNumber?: string
+  gopayNumber?: string
+  address?: string
+}
+
+interface TPSProfile {
+  name: string
+  email: string
+  phone?: string
+  whatsappNumber?: string
+  gopayNumber?: string
+  address?: string
+}
+
 export default function DashboardPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [profile, setProfile] = useState<UserProfile | TPSProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -42,8 +65,39 @@ export default function DashboardPage() {
   useEffect(() => {
     if (status === 'authenticated' && session?.user) {
       fetchDashboardData()
+      fetchProfile()
     }
   }, [status, session])
+
+  const fetchProfile = async () => {
+    try {
+      const endpoint = session?.user.role === 'TPS' ? '/api/tps/profile' : '/api/user/profile'
+      const res = await fetch(endpoint)
+      const data = await res.json()
+      
+      if (session?.user.role === 'TPS') {
+        setProfile(data.profile ? {
+          name: data.profile.name || session.user.name || '',
+          email: session.user.email || '',
+          phone: data.profile.phone || '',
+          whatsappNumber: data.profile.whatsappNumber || '',
+          gopayNumber: data.profile.gopayNumber || '',
+          address: data.profile.address || ''
+        } : null)
+      } else {
+        setProfile(data.user ? {
+          name: data.user.name || '',
+          email: data.user.email || '',
+          phone: data.user.phone || '',
+          whatsappNumber: data.user.whatsappNumber || '',
+          gopayNumber: data.user.gopayNumber || '',
+          address: data.user.address || ''
+        } : null)
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error)
+    }
+  }
 
   const fetchDashboardData = async () => {
     try {
@@ -83,16 +137,81 @@ export default function DashboardPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-green-600 to-green-700 rounded-2xl p-8 text-white mb-8">
-        <h1 className="text-3xl font-bold mb-2">
+      <div className="bg-gradient-to-r from-green-700 to-green-800 rounded-2xl p-8 text-white mb-8">
+        <h1 className="text-3xl font-bold mb-2 text-white">
           Selamat Datang, {session.user.name}! 👋
         </h1>
-        <p className="text-green-100">
+        <p className="text-green-50">
           {role === 'USER' && 'Kelola sampah Anda dengan mudah dan dapatkan penghasilan tambahan'}
           {role === 'TPS' && 'Kelola permintaan penjemputan dan transaksi sampah'}
           {role === 'ADMIN' && 'Pantau dan kelola seluruh aktivitas GoClean'}
         </p>
       </div>
+
+      {/* Profile Card */}
+      {profile && (role === 'USER' || role === 'TPS') && (
+        <div className="bg-white rounded-xl p-6 shadow-md border border-green-100 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-800 flex items-center">
+              <UserIcon className="mr-2 text-green-600" size={24} />
+              Profil Saya
+            </h2>
+            <Link
+              href={role === 'TPS' ? '/tps/profile' : '/profile'}
+              className="flex items-center text-green-600 hover:text-green-700 text-sm font-medium"
+            >
+              <Edit size={16} className="mr-1" />
+              Edit Profile
+            </Link>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm text-gray-600">Nama</p>
+                <p className="text-gray-800 font-medium">{profile.name || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Email</p>
+                <p className="text-gray-800 font-medium">{profile.email || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 flex items-center">
+                  <Phone size={14} className="mr-1" />
+                  Nomor Telepon
+                </p>
+                <p className="text-gray-800 font-medium">{profile.phone || '-'}</p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm text-gray-600 flex items-center">
+                  <MessageCircle size={14} className="mr-1" />
+                  WhatsApp
+                </p>
+                <p className="text-gray-800 font-medium">{profile.whatsappNumber || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Gopay</p>
+                <p className="text-gray-800 font-medium">{profile.gopayNumber || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Alamat</p>
+                <p className="text-gray-800 font-medium">{profile.address || '-'}</p>
+              </div>
+            </div>
+          </div>
+
+          {(!profile.phone || !profile.whatsappNumber || !profile.gopayNumber || !profile.address) && (
+            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800">
+                ⚠️ Lengkapi profil Anda untuk pengalaman yang lebih baik
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Quick Actions */}
       {role === 'USER' && (
@@ -105,34 +224,34 @@ export default function DashboardPage() {
               <Plus size={28} className="text-green-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-lg">Jemput Sampah</h3>
-              <p className="text-gray-500 text-sm">Buat permintaan penjemputan</p>
+              <h3 className="font-semibold text-lg text-gray-800">Jemput Sampah</h3>
+              <p className="text-gray-600 text-sm">Buat permintaan penjemputan</p>
             </div>
           </Link>
 
           <Link
             href="/pickup/history"
-            className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition flex items-center space-x-4 border-2 border-transparent hover:border-blue-500"
+            className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition flex items-center space-x-4 border-2 border-transparent hover:border-green-500"
           >
-            <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center">
-              <Clock size={28} className="text-blue-600" />
+            <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
+              <Clock size={28} className="text-green-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-lg">Riwayat</h3>
-              <p className="text-gray-500 text-sm">Lihat riwayat penjemputan</p>
+              <h3 className="font-semibold text-lg text-gray-800">Riwayat</h3>
+              <p className="text-gray-600 text-sm">Lihat riwayat penjemputan</p>
             </div>
           </Link>
 
           <Link
             href="/transactions"
-            className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition flex items-center space-x-4 border-2 border-transparent hover:border-yellow-500"
+            className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition flex items-center space-x-4 border-2 border-transparent hover:border-green-500"
           >
-            <div className="w-14 h-14 bg-yellow-100 rounded-full flex items-center justify-center">
-              <DollarSign size={28} className="text-yellow-600" />
+            <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
+              <DollarSign size={28} className="text-green-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-lg">Transaksi</h3>
-              <p className="text-gray-500 text-sm">Lihat transaksi penjualan</p>
+              <h3 className="font-semibold text-lg text-gray-800">Transaksi</h3>
+              <p className="text-gray-600 text-sm">Lihat transaksi penjualan</p>
             </div>
           </Link>
         </div>
@@ -148,34 +267,34 @@ export default function DashboardPage() {
               <Truck size={28} className="text-green-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-lg">Permintaan Baru</h3>
-              <p className="text-gray-500 text-sm">Lihat permintaan penjemputan</p>
+              <h3 className="font-semibold text-lg text-gray-800">Permintaan Baru</h3>
+              <p className="text-gray-600 text-sm">Lihat permintaan penjemputan</p>
             </div>
           </Link>
 
           <Link
             href="/tps/map"
-            className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition flex items-center space-x-4 border-2 border-transparent hover:border-blue-500"
+            className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition flex items-center space-x-4 border-2 border-transparent hover:border-green-500"
           >
-            <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center">
-              <MapPin size={28} className="text-blue-600" />
+            <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
+              <MapPin size={28} className="text-green-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-lg">Peta Lokasi</h3>
-              <p className="text-gray-500 text-sm">Lihat lokasi penjemputan</p>
+              <h3 className="font-semibold text-lg text-gray-800">Peta Lokasi</h3>
+              <p className="text-gray-600 text-sm">Lihat lokasi penjemputan</p>
             </div>
           </Link>
 
           <Link
             href="/tps/transactions"
-            className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition flex items-center space-x-4 border-2 border-transparent hover:border-yellow-500"
+            className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition flex items-center space-x-4 border-2 border-transparent hover:border-green-500"
           >
-            <div className="w-14 h-14 bg-yellow-100 rounded-full flex items-center justify-center">
-              <DollarSign size={28} className="text-yellow-600" />
+            <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
+              <DollarSign size={28} className="text-green-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-lg">Transaksi</h3>
-              <p className="text-gray-500 text-sm">Kelola transaksi</p>
+              <h3 className="font-semibold text-lg text-gray-800">Transaksi</h3>
+              <p className="text-gray-600 text-sm">Kelola transaksi</p>
             </div>
           </Link>
         </div>
@@ -183,49 +302,49 @@ export default function DashboardPage() {
 
       {/* Stats Cards */}
       <div className="grid md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-xl p-6 shadow-md">
+        <div className="bg-white rounded-xl p-6 shadow-md border border-green-100">
           <div className="flex items-center justify-between mb-4">
-            <AlertCircle className="text-yellow-500" size={24} />
-            <span className="text-sm text-gray-500">Pending</span>
+            <AlertCircle className="text-green-600" size={24} />
+            <span className="text-sm text-gray-600">Pending</span>
           </div>
-          <p className="text-3xl font-bold">{stats?.pendingPickups || 0}</p>
-          <p className="text-gray-500 text-sm">Menunggu dijemput</p>
+          <p className="text-3xl font-bold text-gray-800">{stats?.pendingPickups || 0}</p>
+          <p className="text-gray-600 text-sm">Menunggu dijemput</p>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-md">
+        <div className="bg-white rounded-xl p-6 shadow-md border border-green-100">
           <div className="flex items-center justify-between mb-4">
-            <Truck className="text-blue-500" size={24} />
-            <span className="text-sm text-gray-500">Dalam Proses</span>
+            <Truck className="text-green-600" size={24} />
+            <span className="text-sm text-gray-600">Dalam Proses</span>
           </div>
-          <p className="text-3xl font-bold">0</p>
-          <p className="text-gray-500 text-sm">Sedang dijemput</p>
+          <p className="text-3xl font-bold text-gray-800">0</p>
+          <p className="text-gray-600 text-sm">Sedang dijemput</p>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-md">
+        <div className="bg-white rounded-xl p-6 shadow-md border border-green-100">
           <div className="flex items-center justify-between mb-4">
-            <CheckCircle className="text-green-500" size={24} />
-            <span className="text-sm text-gray-500">Selesai</span>
+            <CheckCircle className="text-green-600" size={24} />
+            <span className="text-sm text-gray-600">Selesai</span>
           </div>
-          <p className="text-3xl font-bold">{stats?.completedPickups || 0}</p>
-          <p className="text-gray-500 text-sm">Total penjemputan</p>
+          <p className="text-3xl font-bold text-gray-800">{stats?.completedPickups || 0}</p>
+          <p className="text-gray-600 text-sm">Total penjemputan</p>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-md">
+        <div className="bg-white rounded-xl p-6 shadow-md border border-green-100">
           <div className="flex items-center justify-between mb-4">
-            <DollarSign className="text-yellow-500" size={24} />
-            <span className="text-sm text-gray-500">Penghasilan</span>
+            <DollarSign className="text-green-600" size={24} />
+            <span className="text-sm text-gray-600">Penghasilan</span>
           </div>
-          <p className="text-3xl font-bold">
+          <p className="text-3xl font-bold text-green-600">
             Rp {(stats?.totalEarnings || 0).toLocaleString('id-ID')}
           </p>
-          <p className="text-gray-500 text-sm">Total pendapatan</p>
+          <p className="text-gray-600 text-sm">Total pendapatan</p>
         </div>
       </div>
 
       {/* Recent Activity */}
-      <div className="bg-white rounded-xl shadow-md p-6">
+      <div className="bg-white rounded-xl shadow-md p-6 border border-green-100">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold">Aktivitas Terbaru</h2>
+          <h2 className="text-xl font-bold text-gray-800">Aktivitas Terbaru</h2>
           <Link
             href={role === 'USER' ? '/pickup/history' : '/tps/requests'}
             className="text-green-600 hover:underline flex items-center space-x-1"
@@ -245,12 +364,12 @@ export default function DashboardPage() {
                 <div className="flex items-center space-x-4">
                   <div className={`w-3 h-3 rounded-full ${
                     pickup.status === 'PENDING' ? 'bg-yellow-500' :
-                    pickup.status === 'ACCEPTED' ? 'bg-blue-500' :
-                    pickup.status === 'COMPLETED' ? 'bg-green-500' : 'bg-gray-500'
+                    pickup.status === 'ACCEPTED' ? 'bg-green-400' :
+                    pickup.status === 'COMPLETED' ? 'bg-green-600' : 'bg-gray-500'
                   }`} />
                   <div>
-                    <p className="font-medium">{pickup.address}</p>
-                    <p className="text-sm text-gray-500">
+                    <p className="font-medium text-gray-800">{pickup.address}</p>
+                    <p className="text-sm text-gray-600">
                       {new Date(pickup.createdAt).toLocaleDateString('id-ID', {
                         day: 'numeric',
                         month: 'long',
@@ -259,9 +378,9 @@ export default function DashboardPage() {
                     </p>
                   </div>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-sm ${
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                   pickup.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                  pickup.status === 'ACCEPTED' ? 'bg-blue-100 text-blue-800' :
+                  pickup.status === 'ACCEPTED' ? 'bg-green-100 text-green-800' :
                   pickup.status === 'COMPLETED' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                 }`}>
                   {pickup.status === 'PENDING' && 'Menunggu'}
@@ -275,8 +394,8 @@ export default function DashboardPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-8 text-gray-500">
-            <Truck size={48} className="mx-auto mb-4 text-gray-300" />
+          <div className="text-center py-8 text-gray-600">
+            <Truck size={48} className="mx-auto mb-4 text-green-400" />
             <p>Belum ada aktivitas</p>
             {role === 'USER' && (
               <Link

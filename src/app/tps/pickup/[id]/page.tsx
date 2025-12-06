@@ -118,6 +118,11 @@ export default function PickupDetailPage() {
   const fetchPickupDetail = async () => {
     try {
       const res = await fetch(`/api/pickups/${pickupId}`)
+      
+      if (!res.ok) {
+        throw new Error(`Failed to fetch: ${res.status}`)
+      }
+      
       const data = await res.json()
       
       if (data.data) {
@@ -128,6 +133,9 @@ export default function PickupDetailPage() {
           weights[item.id] = item.actualWeight || item.estimatedWeight || 0
         })
         setWeightInputs(weights)
+      } else if (data.error) {
+        toast.error(data.error)
+        router.push('/tps/requests')
       } else {
         toast.error('Permintaan tidak ditemukan')
         router.push('/tps/requests')
@@ -135,6 +143,7 @@ export default function PickupDetailPage() {
     } catch (error) {
       console.error('Error fetching pickup:', error)
       toast.error('Gagal memuat data')
+      router.push('/tps/requests')
     } finally {
       setIsLoading(false)
     }

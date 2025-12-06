@@ -126,43 +126,43 @@ export default function TPSTransactionsPage() {
   const totalWeight = transactions.reduce((sum, t) => sum + t.totalWeight, 0)
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto px-4 py-8 bg-gradient-to-b from-green-50 to-white min-h-screen">
       {/* Header */}
       <div className="mb-8">
         <Link
           href="/dashboard"
-          className="inline-flex items-center text-gray-600 hover:text-green-600 mb-4"
+          className="inline-flex items-center text-green-700 hover:text-green-600 mb-4"
         >
           <ArrowLeft size={20} className="mr-2" />
           Kembali ke Dashboard
         </Link>
-        <h1 className="text-3xl font-bold">Transaksi Pembayaran</h1>
-        <p className="text-gray-600 mt-2">
+        <h1 className="text-3xl font-bold text-green-800">Transaksi Pembayaran</h1>
+        <p className="text-green-700 mt-2">
           Kelola pembayaran sampah dari masyarakat
         </p>
       </div>
 
       {/* Summary Cards */}
       <div className="grid md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="bg-white rounded-xl shadow-md p-6 border border-green-100">
           <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-              <DollarSign className="text-blue-600" size={24} />
+            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+              <DollarSign className="text-green-600" size={24} />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Total Transaksi</p>
-              <p className="text-2xl font-bold">{totalTransactions}</p>
+              <p className="text-sm text-green-700">Total Transaksi</p>
+              <p className="text-2xl font-bold text-green-800">{totalTransactions}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="bg-white rounded-xl shadow-md p-6 border border-green-100">
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
               <CheckCircle className="text-green-600" size={24} />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Sudah Dibayar</p>
+              <p className="text-sm text-green-700">Sudah Dibayar</p>
               <p className="text-2xl font-bold text-green-600">
                 Rp {totalPaid.toLocaleString('id-ID')}
               </p>
@@ -170,13 +170,13 @@ export default function TPSTransactionsPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="bg-white rounded-xl shadow-md p-6 border border-green-100">
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-              <Clock className="text-yellow-600" size={24} />
+              <Clock className="text-green-500" size={24} />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Belum Dibayar</p>
+              <p className="text-sm text-green-700">Belum Dibayar</p>
               <p className="text-2xl font-bold text-yellow-600">
                 Rp {totalUnpaid.toLocaleString('id-ID')}
               </p>
@@ -184,14 +184,14 @@ export default function TPSTransactionsPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="bg-white rounded-xl shadow-md p-6 border border-green-100">
           <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-              <Filter className="text-purple-600" size={24} />
+            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+              <Filter className="text-green-600" size={24} />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Total Berat</p>
-              <p className="text-2xl font-bold">{totalWeight} kg</p>
+              <p className="text-sm text-green-700">Total Berat</p>
+              <p className="text-2xl font-bold text-green-800">{totalWeight} kg</p>
             </div>
           </div>
         </div>
@@ -204,7 +204,7 @@ export default function TPSTransactionsPage() {
           className={`px-4 py-2 rounded-lg font-medium transition ${
             filter === 'all'
               ? 'bg-green-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              : 'bg-green-50 text-green-700 hover:bg-green-100'
           }`}
         >
           Semua
@@ -213,8 +213,8 @@ export default function TPSTransactionsPage() {
           onClick={() => setFilter('unpaid')}
           className={`px-4 py-2 rounded-lg font-medium transition ${
             filter === 'unpaid'
-              ? 'bg-yellow-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ? 'bg-green-600 text-white'
+              : 'bg-green-50 text-green-700 hover:bg-green-100'
           }`}
         >
           Belum Dibayar
@@ -224,7 +224,7 @@ export default function TPSTransactionsPage() {
           className={`px-4 py-2 rounded-lg font-medium transition ${
             filter === 'paid'
               ? 'bg-green-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              : 'bg-green-50 text-green-700 hover:bg-green-100'
           }`}
         >
           Sudah Dibayar
@@ -237,7 +237,7 @@ export default function TPSTransactionsPage() {
           {filteredTransactions.map((transaction) => (
             <div
               key={transaction.id}
-              className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition"
+              className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition border border-green-100"
             >
               <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between">
                 <div className="flex-1">
@@ -249,7 +249,7 @@ export default function TPSTransactionsPage() {
                     }`}>
                       {transaction.isPaid ? '✓ Sudah Dibayar' : '⏳ Belum Dibayar'}
                     </span>
-                    <span className="text-sm text-gray-500 flex items-center">
+                    <span className="text-sm text-green-600 flex items-center">
                       <Calendar size={14} className="mr-1" />
                       {new Date(transaction.createdAt).toLocaleDateString('id-ID', {
                         day: 'numeric',
@@ -261,15 +261,15 @@ export default function TPSTransactionsPage() {
 
                   {/* Customer Info */}
                   <div className="mb-3">
-                    <p className="font-semibold text-gray-800">
+                    <p className="font-semibold text-green-800">
                       {transaction.pickupRequest.user.name}
                     </p>
                     {transaction.pickupRequest.user.phone && (
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-green-600">
                         {transaction.pickupRequest.user.phone}
                       </p>
                     )}
-                    <p className="text-gray-600 text-sm mt-1">
+                    <p className="text-green-700 text-sm mt-1">
                       {transaction.pickupRequest.address}
                     </p>
                   </div>
@@ -279,7 +279,7 @@ export default function TPSTransactionsPage() {
                     {transaction.pickupRequest.wasteItems.map((item, i) => (
                       <span
                         key={i}
-                        className="px-3 py-1 bg-gray-100 rounded-full text-sm"
+                        className="px-3 py-1 bg-green-50 rounded-full text-sm text-green-700"
                       >
                         {WASTE_TYPE_LABELS[item.wasteType] || item.wasteType}
                         {item.actualWeight && ` (${item.actualWeight} kg)`}
@@ -291,9 +291,9 @@ export default function TPSTransactionsPage() {
 
                 {/* Price and Actions */}
                 <div className="mt-4 lg:mt-0 lg:ml-6 text-right flex-shrink-0">
-                  <p className="text-sm text-gray-500">Total Berat</p>
-                  <p className="font-semibold">{transaction.totalWeight} kg</p>
-                  <p className="text-sm text-gray-500 mt-2">Total Harga</p>
+                  <p className="text-sm text-green-700">Total Berat</p>
+                  <p className="font-semibold text-green-800">{transaction.totalWeight} kg</p>
+                  <p className="text-sm text-green-700 mt-2">Total Harga</p>
                   <p className="text-2xl font-bold text-green-600">
                     Rp {transaction.totalPrice.toLocaleString('id-ID')}
                   </p>
@@ -313,12 +313,12 @@ export default function TPSTransactionsPage() {
           ))}
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-md p-12 text-center">
+        <div className="bg-white rounded-xl shadow-md p-12 text-center border border-green-100">
           <div className="text-6xl mb-4">💰</div>
-          <h3 className="text-xl font-semibold text-gray-700 mb-2">
+          <h3 className="text-xl font-semibold text-green-800 mb-2">
             {filter !== 'all' ? 'Tidak Ada Transaksi' : 'Belum Ada Transaksi'}
           </h3>
-          <p className="text-gray-500">
+          <p className="text-green-700">
             {filter === 'unpaid'
               ? 'Semua transaksi sudah dibayar'
               : filter === 'paid'

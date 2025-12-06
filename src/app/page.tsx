@@ -3,19 +3,19 @@ import { Recycle, MapPin, DollarSign, Truck, ArrowRight, CheckCircle } from 'luc
 
 export default function Home() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-green-600 to-green-800 text-white">
+      <section className="bg-gradient-to-br from-green-700 to-green-900 text-white">
         <div className="max-w-7xl mx-auto px-4 py-20 md:py-32">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
-              <h1 className="text-4xl md:text-6xl font-bold mb-6">
+              <h1 className="text-4xl md:text-6xl font-bold mb-6 text-white">
                 GoClean
               </h1>
-              <p className="text-xl md:text-2xl mb-4 text-green-100">
+              <p className="text-xl md:text-2xl mb-4 text-white font-medium">
                 Kelola Sampah Jadi Mudah & Menguntungkan
               </p>
-              <p className="text-lg mb-8 text-green-200">
+              <p className="text-lg mb-8 text-green-50">
                 Foto sampahmu, kirim lokasi, dan tunggu dijemput oleh TPS terdekat. 
                 Sampah yang layak jual bisa jadi uang tambahan!
               </p>
@@ -47,7 +47,7 @@ export default function Home() {
       {/* Features Section */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-4 text-gray-800">
             Fitur Unggulan
           </h2>
           <p className="text-gray-600 text-center mb-12 max-w-2xl mx-auto">
@@ -56,44 +56,44 @@ export default function Home() {
           
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {/* Feature 1 */}
-            <div className="bg-green-50 rounded-2xl p-6 hover:shadow-lg transition">
+            <div className="bg-green-50 rounded-2xl p-6 hover:shadow-lg transition border border-green-100">
               <div className="w-14 h-14 bg-green-600 rounded-full flex items-center justify-center mb-4">
                 <MapPin size={28} className="text-white" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Penjemputan Lokasi</h3>
+              <h3 className="text-xl font-semibold mb-2 text-gray-800">Penjemputan Lokasi</h3>
               <p className="text-gray-600">
                 Gunakan GPS untuk menentukan lokasi penjemputan sampah dengan mudah dan akurat
               </p>
             </div>
 
             {/* Feature 2 */}
-            <div className="bg-blue-50 rounded-2xl p-6 hover:shadow-lg transition">
-              <div className="w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center mb-4">
+            <div className="bg-green-50 rounded-2xl p-6 hover:shadow-lg transition border border-green-100">
+              <div className="w-14 h-14 bg-green-600 rounded-full flex items-center justify-center mb-4">
                 <Truck size={28} className="text-white" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Foto & Video</h3>
+              <h3 className="text-xl font-semibold mb-2 text-gray-800">Foto & Video</h3>
               <p className="text-gray-600">
                 Dokumentasikan sampah Anda dengan foto dan video untuk proses verifikasi yang cepat
               </p>
             </div>
 
             {/* Feature 3 */}
-            <div className="bg-yellow-50 rounded-2xl p-6 hover:shadow-lg transition">
-              <div className="w-14 h-14 bg-yellow-600 rounded-full flex items-center justify-center mb-4">
+            <div className="bg-green-50 rounded-2xl p-6 hover:shadow-lg transition border border-green-100">
+              <div className="w-14 h-14 bg-green-600 rounded-full flex items-center justify-center mb-4">
                 <DollarSign size={28} className="text-white" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Jual Sampah</h3>
+              <h3 className="text-xl font-semibold mb-2 text-gray-800">Jual Sampah</h3>
               <p className="text-gray-600">
                 Sampah plastik, kertas, logam bisa dijual dan menghasilkan uang tambahan
               </p>
             </div>
 
             {/* Feature 4 */}
-            <div className="bg-purple-50 rounded-2xl p-6 hover:shadow-lg transition">
-              <div className="w-14 h-14 bg-purple-600 rounded-full flex items-center justify-center mb-4">
+            <div className="bg-green-50 rounded-2xl p-6 hover:shadow-lg transition border border-green-100">
+              <div className="w-14 h-14 bg-green-600 rounded-full flex items-center justify-center mb-4">
                 <Recycle size={28} className="text-white" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Integrasi TPS</h3>
+              <h3 className="text-xl font-semibold mb-2 text-gray-800">Integrasi TPS</h3>
               <p className="text-gray-600">
                 Terhubung langsung dengan TPS terdekat untuk proses penjemputan yang efisien
               </p>
@@ -103,9 +103,9 @@ export default function Home() {
       </section>
 
       {/* How It Works Section */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 bg-gray-100">
         <div className="max-w-7xl mx-auto px-4">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-4 text-gray-800">
             Cara Kerja
           </h2>
           <p className="text-gray-600 text-center mb-12 max-w-2xl mx-auto">
@@ -123,7 +123,7 @@ export default function Home() {
                 <div className="w-16 h-16 bg-green-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
                   {item.step}
                 </div>
-                <h3 className="text-lg font-semibold mb-2">{item.title}</h3>
+                <h3 className="text-lg font-semibold mb-2 text-gray-800">{item.title}</h3>
                 <p className="text-gray-600">{item.desc}</p>
               </div>
             ))}
@@ -134,16 +134,16 @@ export default function Home() {
       {/* User Types Section */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-gray-800">
             Siapa Saja Bisa Menggunakan GoClean
           </h2>
 
           <div className="grid md:grid-cols-3 gap-8">
             {/* Masyarakat */}
-            <div className="border-2 border-green-200 rounded-2xl p-8 hover:border-green-500 transition">
+            <div className="border-2 border-green-200 rounded-2xl p-8 hover:border-green-500 transition bg-white shadow-sm">
               <div className="text-4xl mb-4">👨‍👩‍👧‍👦</div>
-              <h3 className="text-2xl font-semibold mb-4">Masyarakat</h3>
-              <ul className="space-y-3">
+              <h3 className="text-2xl font-semibold mb-4 text-gray-800">Masyarakat</h3>
+              <ul className="space-y-3 text-gray-700">
                 {[
                   'Foto & video sampah',
                   'Tentukan lokasi penjemputan',
@@ -152,7 +152,7 @@ export default function Home() {
                   'Riwayat transaksi lengkap'
                 ].map((item, i) => (
                   <li key={i} className="flex items-center space-x-2">
-                    <CheckCircle size={18} className="text-green-500" />
+                    <CheckCircle size={18} className="text-green-600" />
                     <span>{item}</span>
                   </li>
                 ))}
@@ -160,10 +160,10 @@ export default function Home() {
             </div>
 
             {/* TPS */}
-            <div className="border-2 border-blue-200 rounded-2xl p-8 hover:border-blue-500 transition">
+            <div className="border-2 border-green-200 rounded-2xl p-8 hover:border-green-500 transition bg-white shadow-sm">
               <div className="text-4xl mb-4">🏭</div>
-              <h3 className="text-2xl font-semibold mb-4">Pihak TPS</h3>
-              <ul className="space-y-3">
+              <h3 className="text-2xl font-semibold mb-4 text-gray-800">Pihak TPS</h3>
+              <ul className="space-y-3 text-gray-700">
                 {[
                   'Lihat permintaan penjemputan',
                   'Peta lokasi terintegrasi GIS',
@@ -172,7 +172,7 @@ export default function Home() {
                   'Kelola transaksi penjualan'
                 ].map((item, i) => (
                   <li key={i} className="flex items-center space-x-2">
-                    <CheckCircle size={18} className="text-blue-500" />
+                    <CheckCircle size={18} className="text-green-600" />
                     <span>{item}</span>
                   </li>
                 ))}
@@ -180,10 +180,10 @@ export default function Home() {
             </div>
 
             {/* Admin */}
-            <div className="border-2 border-purple-200 rounded-2xl p-8 hover:border-purple-500 transition">
+            <div className="border-2 border-green-200 rounded-2xl p-8 hover:border-green-500 transition bg-white shadow-sm">
               <div className="text-4xl mb-4">👨‍💼</div>
-              <h3 className="text-2xl font-semibold mb-4">Admin</h3>
-              <ul className="space-y-3">
+              <h3 className="text-2xl font-semibold mb-4 text-gray-800">Admin</h3>
+              <ul className="space-y-3 text-gray-700">
                 {[
                   'Kelola semua pengguna',
                   'Kelola TPS terdaftar',
@@ -192,7 +192,7 @@ export default function Home() {
                   'Pengaturan sistem'
                 ].map((item, i) => (
                   <li key={i} className="flex items-center space-x-2">
-                    <CheckCircle size={18} className="text-purple-500" />
+                    <CheckCircle size={18} className="text-green-600" />
                     <span>{item}</span>
                   </li>
                 ))}
@@ -203,12 +203,12 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-br from-green-600 to-green-800 text-white">
+      <section className="py-20 bg-gradient-to-br from-green-700 to-green-900 text-white">
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">
+          <h2 className="text-3xl md:text-4xl font-bold mb-6 text-white">
             Mulai Kelola Sampah dengan GoClean
           </h2>
-          <p className="text-xl mb-8 text-green-100">
+          <p className="text-xl mb-8 text-green-50">
             Bergabung sekarang dan jadikan lingkungan lebih bersih sambil menghasilkan uang!
           </p>
           <Link

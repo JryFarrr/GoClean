@@ -130,7 +130,7 @@ export default function Navbar() {
                   {isProfileOpen && (
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
                       <Link
-                        href="/profile"
+                        href={session.user.role === 'TPS' ? '/tps/profile' : '/profile'}
                         className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
                         onClick={() => setIsProfileOpen(false)}
                       >
@@ -209,7 +209,7 @@ export default function Navbar() {
                   )}
                 </Link>
                 <Link
-                  href="/profile"
+                  href={session.user.role === 'TPS' ? '/tps/profile' : '/profile'}
                   className="flex items-center space-x-2 px-4 py-3 hover:bg-green-700"
                   onClick={() => setIsMenuOpen(false)}
                 >

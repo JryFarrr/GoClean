@@ -110,18 +110,18 @@ export default function NewPickupPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-4xl mx-auto px-4 py-8 bg-gradient-to-b from-green-50 to-white min-h-screen">
       {/* Header */}
       <div className="mb-8">
         <Link
           href="/dashboard"
-          className="inline-flex items-center text-gray-600 hover:text-green-600 mb-4"
+          className="inline-flex items-center text-green-700 hover:text-green-600 mb-4"
         >
           <ArrowLeft size={20} className="mr-2" />
           Kembali ke Dashboard
         </Link>
-        <h1 className="text-3xl font-bold">Buat Permintaan Penjemputan</h1>
-        <p className="text-gray-600 mt-2">
+        <h1 className="text-3xl font-bold text-green-800">Buat Permintaan Penjemputan</h1>
+        <p className="text-green-700 mt-2">
           Ikuti langkah-langkah berikut untuk membuat permintaan penjemputan sampah
         </p>
       </div>
@@ -139,23 +139,23 @@ export default function NewPickupPage() {
               className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
                 step >= s.num
                   ? 'bg-green-600 text-white'
-                  : 'bg-gray-200 text-gray-500'
+                  : 'bg-green-100 text-green-600'
               }`}
             >
               {s.num}
             </div>
-            <span className={`ml-2 hidden sm:block ${step >= s.num ? 'text-green-600 font-medium' : 'text-gray-500'}`}>
+            <span className={`ml-2 hidden sm:block ${step >= s.num ? 'text-green-600 font-medium' : 'text-green-600'}`}>
               {s.label}
             </span>
             {i < 3 && (
-              <div className={`w-12 md:w-24 h-1 mx-2 ${step > s.num ? 'bg-green-600' : 'bg-gray-200'}`} />
+              <div className={`w-12 md:w-24 h-1 mx-2 ${step > s.num ? 'bg-green-600' : 'bg-green-100'}`} />
             )}
           </div>
         ))}
       </div>
 
       {/* Step Content */}
-      <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
+      <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 border border-green-100">
         {/* Step 1: Location */}
         {step === 1 && (
           <div className="space-y-6">
@@ -163,7 +163,7 @@ export default function NewPickupPage() {
               <MapPin className="text-green-600" size={28} />
               <h2 className="text-2xl font-bold">Pilih Lokasi Penjemputan</h2>
             </div>
-            <p className="text-gray-600">
+            <p className="text-green-700">
               Klik pada peta untuk memilih lokasi atau gunakan tombol "Lokasi Saya" untuk menggunakan lokasi Anda saat ini.
             </p>
             
@@ -200,7 +200,7 @@ export default function NewPickupPage() {
               <FileText className="text-green-600" size={28} />
               <h2 className="text-2xl font-bold">Upload Foto/Video Sampah</h2>
             </div>
-            <p className="text-gray-600">
+            <p className="text-green-700">
               Ambil foto atau video sampah Anda untuk memudahkan pihak TPS menilai jenis dan jumlah sampah.
             </p>
 
@@ -214,7 +214,7 @@ export default function NewPickupPage() {
             <div className="flex space-x-4">
               <button
                 onClick={() => setStep(1)}
-                className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition"
+                className="flex-1 bg-green-100 text-green-700 py-3 rounded-lg font-semibold hover:bg-green-200 transition"
               >
                 Kembali
               </button>
@@ -235,7 +235,7 @@ export default function NewPickupPage() {
               <span className="text-3xl">♻️</span>
               <h2 className="text-2xl font-bold">Pilih Jenis Sampah</h2>
             </div>
-            <p className="text-gray-600">
+            <p className="text-green-700">
               Pilih jenis sampah dan perkiraan berat untuk memudahkan TPS mempersiapkan penjemputan.
             </p>
 
@@ -245,7 +245,7 @@ export default function NewPickupPage() {
             />
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-green-700 mb-2">
                 Deskripsi Tambahan (Opsional)
               </label>
               <textarea
@@ -258,7 +258,7 @@ export default function NewPickupPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-green-700 mb-2">
                 <Calendar size={18} className="inline mr-2" />
                 Jadwal Penjemputan (Opsional)
               </label>
@@ -274,7 +274,7 @@ export default function NewPickupPage() {
             <div className="flex space-x-4">
               <button
                 onClick={() => setStep(2)}
-                className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition"
+                className="flex-1 bg-green-100 text-green-700 py-3 rounded-lg font-semibold hover:bg-green-200 transition"
               >
                 Kembali
               </button>
@@ -292,28 +292,28 @@ export default function NewPickupPage() {
         {/* Step 4: Confirmation */}
         {step === 4 && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold mb-4">Konfirmasi Permintaan</h2>
-            <p className="text-gray-600">
+            <h2 className="text-2xl font-bold mb-4 text-green-800">Konfirmasi Permintaan</h2>
+            <p className="text-green-700">
               Periksa kembali data permintaan Anda sebelum mengirim.
             </p>
 
             <div className="space-y-4">
               {/* Location Summary */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="font-semibold flex items-center">
+              <div className="bg-green-50 rounded-lg p-4">
+                <h3 className="font-semibold flex items-center text-green-800">
                   <MapPin size={18} className="mr-2 text-green-600" />
                   Lokasi Penjemputan
                 </h3>
-                <p className="text-gray-700 mt-1">{address}</p>
+                <p className="text-green-700 mt-1">{address}</p>
               </div>
 
               {/* Media Summary */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="font-semibold flex items-center">
+              <div className="bg-green-50 rounded-lg p-4">
+                <h3 className="font-semibold flex items-center text-green-800">
                   <FileText size={18} className="mr-2 text-green-600" />
                   Media
                 </h3>
-                <p className="text-gray-700 mt-1">
+                <p className="text-green-700 mt-1">
                   {files.length} file (
                   {files.filter((f) => f.type.startsWith('image/')).length} foto,{' '}
                   {files.filter((f) => f.type.startsWith('video/')).length} video)
@@ -321,11 +321,11 @@ export default function NewPickupPage() {
               </div>
 
               {/* Waste Items Summary */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="font-semibold mb-2">♻️ Jenis Sampah</h3>
+              <div className="bg-green-50 rounded-lg p-4">
+                <h3 className="font-semibold mb-2 text-green-800">♻️ Jenis Sampah</h3>
                 <div className="space-y-2">
                   {wasteItems.map((item, i) => (
-                    <div key={i} className="flex justify-between text-gray-700">
+                    <div key={i} className="flex justify-between text-green-700">
                       <span>{item.wasteType}</span>
                       <span>{item.estimatedWeight} kg</span>
                     </div>
@@ -341,12 +341,12 @@ export default function NewPickupPage() {
 
               {/* Schedule */}
               {scheduledAt && (
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="font-semibold flex items-center">
+                <div className="bg-green-50 rounded-lg p-4">
+                  <h3 className="font-semibold flex items-center text-green-800">
                     <Calendar size={18} className="mr-2 text-green-600" />
                     Jadwal Penjemputan
                   </h3>
-                  <p className="text-gray-700 mt-1">
+                  <p className="text-green-700 mt-1">
                     {new Date(scheduledAt).toLocaleDateString('id-ID', {
                       weekday: 'long',
                       day: 'numeric',
@@ -361,9 +361,9 @@ export default function NewPickupPage() {
 
               {/* Description */}
               {description && (
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="font-semibold">Catatan</h3>
-                  <p className="text-gray-700 mt-1">{description}</p>
+                <div className="bg-green-50 rounded-lg p-4">
+                  <h3 className="font-semibold text-green-800">Catatan</h3>
+                  <p className="text-green-700 mt-1">{description}</p>
                 </div>
               )}
             </div>
@@ -371,7 +371,7 @@ export default function NewPickupPage() {
             <div className="flex space-x-4">
               <button
                 onClick={() => setStep(3)}
-                className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition"
+                className="flex-1 bg-green-100 text-green-700 py-3 rounded-lg font-semibold hover:bg-green-200 transition"
               >
                 Kembali
               </button>

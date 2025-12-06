@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { tpsName, address, latitude, longitude, phone, operatingHours } = body
+    const { tpsName, address, latitude, longitude, phone, gopayNumber, whatsappNumber, operatingHours } = body
 
     if (!tpsName || !address) {
       return NextResponse.json(
@@ -65,6 +65,8 @@ export async function POST(req: NextRequest) {
         latitude: latitude ? parseFloat(latitude) : null,
         longitude: longitude ? parseFloat(longitude) : null,
         phone,
+        gopayNumber,
+        whatsappNumber,
         operatingHours
       },
       create: {
@@ -74,6 +76,8 @@ export async function POST(req: NextRequest) {
         latitude: latitude ? parseFloat(latitude) : null,
         longitude: longitude ? parseFloat(longitude) : null,
         phone,
+        gopayNumber,
+        whatsappNumber,
         operatingHours
       }
     })

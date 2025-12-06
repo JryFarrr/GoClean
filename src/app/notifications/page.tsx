@@ -28,17 +28,17 @@ interface Notification {
 }
 
 const TYPE_ICONS: Record<string, React.ReactNode> = {
-  pickup: <Package className="text-blue-600" size={20} />,
+  pickup: <Package className="text-green-600" size={20} />,
   transaction: <DollarSign className="text-green-600" size={20} />,
-  system: <AlertCircle className="text-yellow-600" size={20} />,
-  reminder: <Clock className="text-purple-600" size={20} />
+  system: <AlertCircle className="text-green-500" size={20} />,
+  reminder: <Clock className="text-green-600" size={20} />
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  pickup: 'bg-blue-100',
+  pickup: 'bg-green-100',
   transaction: 'bg-green-100',
-  system: 'bg-yellow-100',
-  reminder: 'bg-purple-100'
+  system: 'bg-green-50',
+  reminder: 'bg-green-100'
 }
 
 export default function NotificationsPage() {
@@ -135,20 +135,20 @@ export default function NotificationsPage() {
   const unreadCount = notifications.filter(n => !n.isRead).length
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-4xl mx-auto px-4 py-8 bg-gradient-to-b from-green-50 to-white min-h-screen">
       {/* Header */}
       <div className="mb-8">
         <Link
           href="/dashboard"
-          className="inline-flex items-center text-gray-600 hover:text-green-600 mb-4"
+          className="inline-flex items-center text-green-700 hover:text-green-600 mb-4"
         >
           <ArrowLeft size={20} className="mr-2" />
           Kembali ke Dashboard
         </Link>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Notifikasi</h1>
-            <p className="text-gray-600 mt-2">
+            <h1 className="text-3xl font-bold text-green-800">Notifikasi</h1>
+            <p className="text-green-700 mt-2">
               {unreadCount > 0
                 ? `${unreadCount} notifikasi belum dibaca`
                 : 'Semua notifikasi telah dibaca'}
@@ -173,7 +173,7 @@ export default function NotificationsPage() {
           className={`px-4 py-2 rounded-lg font-medium transition ${
             filter === 'all'
               ? 'bg-green-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              : 'bg-green-50 text-green-700 hover:bg-green-100'
           }`}
         >
           Semua
@@ -183,12 +183,12 @@ export default function NotificationsPage() {
           className={`px-4 py-2 rounded-lg font-medium transition ${
             filter === 'unread'
               ? 'bg-green-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              : 'bg-green-50 text-green-700 hover:bg-green-100'
           }`}
         >
           Belum Dibaca
           {unreadCount > 0 && (
-            <span className="ml-2 px-2 py-0.5 text-xs bg-red-500 text-white rounded-full">
+            <span className="ml-2 px-2 py-0.5 text-xs bg-green-700 text-white rounded-full">
               {unreadCount}
             </span>
           )}
@@ -201,8 +201,8 @@ export default function NotificationsPage() {
           {filteredNotifications.map((notification) => (
             <div
               key={notification.id}
-              className={`bg-white rounded-xl shadow-md p-5 hover:shadow-lg transition relative ${
-                !notification.isRead ? 'border-l-4 border-green-600' : ''
+              className={`bg-white rounded-xl shadow-md p-5 hover:shadow-lg transition relative border border-green-100 ${
+                !notification.isRead ? 'border-l-4 border-l-green-600' : ''
               }`}
             >
               <div className="flex items-start space-x-4">
@@ -218,12 +218,12 @@ export default function NotificationsPage() {
                   <div className="flex items-start justify-between">
                     <div>
                       <h3 className={`font-semibold ${
-                        !notification.isRead ? 'text-gray-900' : 'text-gray-700'
+                        !notification.isRead ? 'text-green-900' : 'text-green-800'
                       }`}>
                         {notification.title}
                       </h3>
-                      <p className="text-gray-600 mt-1">{notification.message}</p>
-                      <p className="text-sm text-gray-400 mt-2">
+                      <p className="text-green-700 mt-1">{notification.message}</p>
+                      <p className="text-sm text-green-600 mt-2">
                         {new Date(notification.createdAt).toLocaleDateString('id-ID', {
                           day: 'numeric',
                           month: 'long',
@@ -265,12 +265,12 @@ export default function NotificationsPage() {
           ))}
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-md p-12 text-center">
+        <div className="bg-white rounded-xl shadow-md p-12 text-center border border-green-100">
           <div className="text-6xl mb-4">🔔</div>
-          <h3 className="text-xl font-semibold text-gray-700 mb-2">
+          <h3 className="text-xl font-semibold text-green-800 mb-2">
             {filter === 'unread' ? 'Tidak Ada Notifikasi Belum Dibaca' : 'Tidak Ada Notifikasi'}
           </h3>
-          <p className="text-gray-500">
+          <p className="text-green-700">
             {filter === 'unread'
               ? 'Semua notifikasi Anda sudah dibaca'
               : 'Notifikasi baru akan muncul di sini'}
