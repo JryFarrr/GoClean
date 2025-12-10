@@ -22,6 +22,11 @@ interface PickupLocation {
   lng: number
   title: string
   description: string
+  address: string
+  status: string
+  photos: string[]
+  wasteItems: Array<{ wasteType: string; estimatedWeight: number }>
+  user: { name: string; phone?: string }
   type: 'pickup'
 }
 
@@ -48,24 +53,46 @@ export default function TPSMapPage() {
 
   const fetchPickupLocations = async () => {
     try {
-      const res = await fetch('/api/pickups?status=PENDING')
-      const data = await res.json()
+      // Fetch pickups with multiple statuses (active pickups)
+      const statuses = ['PENDING', 'ACCEPTED', 'ON_THE_WAY', 'PICKED_UP']
+      const allPickups = []
+
+      for (const status of statuses) {
+        const res = await fetch(`/api/pickups?status=${status}`)
+        const data = await res.json()
+        if (data.data) {
+          allPickups.push(...data.data)
+        }
+      }
       
-      const locations: PickupLocation[] = (data.data || []).map((pickup: {
+      const locations: PickupLocation[] = allPickups.map((pickup: {
         id: string
         latitude: number
         longitude: number
         address: string
-        user: { name: string }
+        status: string
+        photos: string | string[]
+        user: { name: string; phone?: string }
         wasteItems: Array<{ wasteType: string; estimatedWeight: number }>
-      }) => ({
-        id: pickup.id,
-        lat: pickup.latitude,
-        lng: pickup.longitude,
-        title: pickup.user.name,
-        description: `${pickup.address}\n${pickup.wasteItems.map((w) => `${w.wasteType}: ${w.estimatedWeight}kg`).join(', ')}`,
-        type: 'pickup' as const
-      }))
+      }) => {
+        const parsedPhotos = typeof pickup.photos === 'string' 
+          ? JSON.parse(pickup.photos || '[]') 
+          : pickup.photos
+
+        return {
+          id: pickup.id,
+          lat: pickup.latitude,
+          lng: pickup.longitude,
+          title: pickup.user.name,
+          description: pickup.address,
+          address: pickup.address,
+          status: pickup.status,
+          photos: parsedPhotos,
+          wasteItems: pickup.wasteItems,
+          user: pickup.user,
+          type: 'pickup' as const
+        }
+      })
 
       setMarkers(locations)
     } catch (error) {
