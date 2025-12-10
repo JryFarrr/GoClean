@@ -6,34 +6,12 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "sqlserver"
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  USER
-  TPS
-  ADMIN
-}
-
-enum PickupStatus {
-  PENDING
-  ACCEPTED
-  ON_THE_WAY
-  PICKED_UP
-  COMPLETED
-  CANCELLED
-}
-
-enum WasteType {
-  ORGANIC
-  PLASTIC
-  PAPER
-  METAL
-  GLASS
-  ELECTRONIC
-  OTHER
-}
+// Enums converted to String for SQL Server compatibility
+// Use these constants in your application code
 
 model User {
   id            String    @id @default(cuid())
@@ -44,7 +22,7 @@ model User {
   address       String?
   gopayNumber   String?
   whatsappNumber String?
-  role          Role      @default(USER)
+  role          String    @default("USER") // USER, TPS, ADMIN
   avatar        String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -95,9 +73,9 @@ model WastePrice {
 model PickupRequest {
   id          String       @id @default(cuid())
   userId      String
-  user        User         @relation("UserPickups", fields: [userId], references: [id], onDelete: Cascade)
+  user        User         @relation("UserPickups", fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   tpsId       String?
-  tps         User?        @relation("TPSPickups", fields: [tpsId], references: [id])
+  tps         User?        @relation("TPSPickups", fields: [tpsId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   
   // Location
   latitude    Float
@@ -106,7 +84,7 @@ model PickupRequest {
   
   // Request details
   description String?
-  status      PickupStatus @default(PENDING)
+  status      String       @default("PENDING") // PENDING, ACCEPTED, ON_THE_WAY, PICKED_UP, COMPLETED, CANCELLED
   scheduledAt DateTime?
   pickedUpAt  DateTime?
   
@@ -126,7 +104,7 @@ model WasteItem {
   id              String        @id @default(cuid())
   pickupRequestId String
   pickupRequest   PickupRequest @relation(fields: [pickupRequestId], references: [id], onDelete: Cascade)
-  wasteType       WasteType
+  wasteType       String        // ORGANIC, PLASTIC, PAPER, METAL, GLASS, ELECTRONIC, OTHER
   estimatedWeight Float?        // in kg
   actualWeight    Float?        // in kg (filled by TPS)
   price           Float?        // calculated price
@@ -137,9 +115,9 @@ model WasteItem {
 model Transaction {
   id              String        @id @default(cuid())
   pickupRequestId String        @unique
-  pickupRequest   PickupRequest @relation(fields: [pickupRequestId], references: [id], onDelete: Cascade)
+  pickupRequest   PickupRequest @relation(fields: [pickupRequestId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   userId          String
-  user            User          @relation(fields: [userId], references: [id])
+  user            User          @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   totalWeight     Float
   totalPrice      Float
   isPaid          Boolean       @default(false)
