@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
     const description = formData.get('description') as string
     const wasteItems = JSON.parse(formData.get('wasteItems') as string)
     const scheduledAt = formData.get('scheduledAt') as string
+    const tpsId = formData.get('tpsId') as string | null
     
     // Handle file uploads
     const photos: string[] = []
@@ -54,6 +55,7 @@ export async function POST(req: NextRequest) {
     const pickupRequest = await prisma.pickupRequest.create({
       data: {
         userId: session.user.id,
+        tpsId: tpsId || null,
         latitude,
         longitude,
         address,
@@ -61,6 +63,7 @@ export async function POST(req: NextRequest) {
         photos: JSON.stringify(photos),
         videos: JSON.stringify(videos),
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
+        status: tpsId ? 'PENDING' : 'PENDING', // Will be updated when TPS accepts
         wasteItems: {
           create: wasteItems.map((item: { wasteType: string; estimatedWeight: number }) => ({
             wasteType: item.wasteType,
@@ -77,9 +80,28 @@ export async function POST(req: NextRequest) {
             email: true,
             phone: true
           }
+        },
+        tps: {
+          select: {
+            id: true,
+            name: true,
+            tpsProfile: true
+          }
         }
       }
     })
+
+    // Create notification for selected TPS
+    if (tpsId) {
+      await prisma.notification.create({
+        data: {
+          userId: tpsId,
+          title: 'Permintaan Penjemputan Baru',
+          message: `Ada permintaan penjemputan sampah baru dari ${session.user.name || 'User'} di ${address}`,
+          type: 'pickup_request'
+        }
+      })
+    }
 
     return NextResponse.json(pickupRequest, { status: 201 })
   } catch (error) {

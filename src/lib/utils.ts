@@ -53,3 +53,55 @@ export const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   COMPLETED: { label: 'Selesai', color: 'bg-green-100 text-green-800' },
   CANCELLED: { label: 'Dibatalkan', color: 'bg-red-100 text-red-800' }
 }
+
+// Calculate distance between two coordinates using Haversine formula
+export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371 // Earth's radius in kilometers
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLon = (lon2 - lon1) * Math.PI / 180
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return R * c // Distance in kilometers
+}
+
+// Calculate price modifier based on distance (closer = higher price, farther = lower price)
+export function getPriceModifier(distanceKm: number): { modifier: number; label: string; color: string } {
+  if (distanceKm <= 1) {
+    return { modifier: 1.0, label: 'Harga Normal (100%)', color: 'text-green-600' }
+  } else if (distanceKm <= 3) {
+    return { modifier: 0.95, label: 'Diskon 5%', color: 'text-blue-600' }
+  } else if (distanceKm <= 5) {
+    return { modifier: 0.9, label: 'Diskon 10%', color: 'text-yellow-600' }
+  } else if (distanceKm <= 10) {
+    return { modifier: 0.85, label: 'Diskon 15%', color: 'text-orange-600' }
+  } else {
+    return { modifier: 0.8, label: 'Diskon 20%', color: 'text-red-600' }
+  }
+}
+
+// Extract district (kecamatan) from address
+export function extractDistrict(address: string): string {
+  // Common patterns for Indonesian addresses
+  const patterns = [
+    /kec(?:amatan)?\.?\s*([^,]+)/i,
+    /,\s*([^,]+)\s*,\s*(?:kota|kabupaten)/i,
+  ]
+  
+  for (const pattern of patterns) {
+    const match = address.match(pattern)
+    if (match && match[1]) {
+      return match[1].trim()
+    }
+  }
+  
+  // Fallback: try to get district from comma-separated parts
+  const parts = address.split(',').map(p => p.trim())
+  if (parts.length >= 3) {
+    return parts[parts.length - 3] // Usually district is 3rd from last
+  }
+  
+  return ''
+}

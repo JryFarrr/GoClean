@@ -1,36 +1,180 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GoClean 🌿
 
-## Getting Started
+Aplikasi pengelolaan sampah berbasis web yang menghubungkan pengguna dengan TPS (Tempat Pembuangan Sampah) untuk penjemputan sampah.
 
-First, run the development server:
+## 📋 Fitur Utama
+
+- **User**: Membuat permintaan penjemputan sampah, memilih lokasi, upload foto/video, memilih TPS
+- **TPS**: Menerima dan mengelola permintaan penjemputan, mengatur harga sampah
+- **Admin**: Mengelola pengguna dan monitoring sistem
+- **Peta Interaktif**: Memilih lokasi penjemputan dengan map
+- **Sistem Harga Dinamis**: Harga berdasarkan jarak TPS dari lokasi user
+
+## 🔧 Teknologi
+
+- **Framework**: Next.js 14 (App Router)
+- **Database**: SQL Server (Local atau Azure)
+- **ORM**: Prisma
+- **Authentication**: NextAuth.js
+- **Styling**: Tailwind CSS
+- **Map**: Leaflet + OpenStreetMap
+
+---
+
+## 🚀 Cara Menjalankan (Local Development)
+
+### Prasyarat
+
+1. **Node.js** v18 atau lebih baru - [Download](https://nodejs.org/)
+2. **SQL Server** (pilih salah satu):
+   - SQL Server Express (Gratis) - [Download](https://www.microsoft.com/en-us/sql-server/sql-server-downloads)
+   - SQL Server Developer Edition (Gratis untuk development)
+3. **SQL Server Management Studio (SSMS)** - [Download](https://docs.microsoft.com/en-us/sql/ssms/download-sql-server-management-studio-ssms) (Opsional, untuk mengelola database)
+
+### Setup Otomatis (Recommended)
+
+```powershell
+# Clone repository
+git clone https://github.com/JryFarrr/GoClean.git
+cd GoClean
+
+# Jalankan script setup (PowerShell sebagai Administrator)
+.\setup-local.ps1
+```
+
+### Setup Manual
+
+#### 1. Clone dan Install Dependencies
+
+```bash
+git clone https://github.com/JryFarrr/GoClean.git
+cd GoClean
+npm install
+```
+
+#### 2. Buat Database di SQL Server
+
+Buka SSMS atau sqlcmd, lalu jalankan:
+```sql
+CREATE DATABASE goclean;
+```
+
+#### 3. Konfigurasi Environment
+
+Copy file `.env.example` ke `.env`:
+```bash
+cp .env.example .env
+```
+
+Edit file `.env` sesuai konfigurasi SQL Server Anda:
+
+**Opsi 1: Windows Authentication**
+```env
+DATABASE_URL="sqlserver://localhost;database=goclean;integratedSecurity=true;trustServerCertificate=true"
+```
+
+**Opsi 2: SQL Server Express dengan Windows Auth**
+```env
+DATABASE_URL="sqlserver://localhost\\SQLEXPRESS;database=goclean;integratedSecurity=true;trustServerCertificate=true"
+```
+
+**Opsi 3: SQL Authentication (Username & Password)**
+```env
+DATABASE_URL="sqlserver://localhost:1433;database=goclean;user=sa;password=YourPassword123;trustServerCertificate=true"
+```
+
+#### 4. Setup Database dengan Prisma
+
+```bash
+# Generate Prisma Client
+npx prisma generate
+
+# Push schema ke database
+npx prisma db push
+
+# (Opsional) Isi data awal
+npx prisma db seed
+```
+
+#### 5. Jalankan Aplikasi
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Buka [http://localhost:3000](http://localhost:3000) di browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 👤 Default Login (setelah seed)
 
-## Learn More
+| Role  | Email              | Password |
+|-------|-------------------|----------|
+| Admin | admin@goclean.com | admin123 |
+| TPS   | tps@goclean.com   | tps123   |
+| User  | user@goclean.com  | user123  |
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🔧 Troubleshooting
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### SQL Server tidak bisa diakses
 
-## Deploy on Vercel
+1. Pastikan service SQL Server berjalan:
+   ```powershell
+   Get-Service -Name "MSSQLSERVER"
+   # atau untuk SQL Express
+   Get-Service -Name "MSSQL$SQLEXPRESS"
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+2. Pastikan TCP/IP enabled di SQL Server Configuration Manager
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+3. Jika menggunakan SQL Authentication, pastikan:
+   - SQL Server authentication mode = "Mixed Mode"
+   - User `sa` sudah di-enable dan password sudah diset
+
+### Prisma error
+
+```bash
+# Reset Prisma client
+npx prisma generate
+
+# Jika ada error migration
+npx prisma db push --force-reset
+```
+
+### Port 3000 sudah digunakan
+
+```bash
+# Jalankan di port lain
+npm run dev -- -p 3001
+```
+
+---
+
+## 📁 Struktur Project
+
+```
+goclean/
+├── prisma/
+│   ├── schema.prisma    # Database schema
+│   └── seed.ts          # Seed data
+├── src/
+│   ├── app/             # Next.js App Router pages
+│   │   ├── api/         # API routes
+│   │   ├── dashboard/   # Dashboard pages
+│   │   ├── pickup/      # Pickup request pages
+│   │   └── tps/         # TPS management pages
+│   ├── components/      # React components
+│   └── lib/             # Utilities & configurations
+├── public/              # Static files
+├── .env.example         # Environment template
+└── setup-local.ps1      # Setup script
+```
+
+---
+
+## 📝 License
+
+MIT License - Silakan gunakan untuk pembelajaran dan pengembangan.
+
