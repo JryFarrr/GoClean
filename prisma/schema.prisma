@@ -1,0 +1,233 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+// Enums converted to String for SQL Server compatibility
+// Use these constants in your application code
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String
+  phone         String?
+  address       String?
+  gopayNumber   String?
+  whatsappNumber String?
+  role          String    @default("USER") // USER, TPS, ADMIN
+  avatar        String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  pickupRequests PickupRequest[] @relation("UserPickups")
+  tpsPickups     PickupRequest[] @relation("TPSPickups")
+  tpsProfile     TPSProfile?
+  transactions   Transaction[]
+  notifications  Notification[]
+}
+
+model TPSProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tpsName        String
+  latitude       Float?
+  longitude      Float?
+  address        String
+  phone          String?
+  gopayNumber    String?
+  whatsappNumber String?
+  operatingHours String?
+  capacity       Int?
+  description    String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Waste prices
+  wastePrices WastePrice[]
+}
+
+model WastePrice {
+  id            String     @id @default(cuid())
+  tpsProfileId  String
+  tpsProfile    TPSProfile @relation(fields: [tpsProfileId], references: [id], onDelete: Cascade)
+  wasteType     String
+  pricePerKg    Float
+  description   String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@unique([tpsProfileId, wasteType])
+}
+
+model PickupRequest {
+  id          String       @id @default(cuid())
+  userId      String
+  user        User         @relation("UserPickups", fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tpsId       String?
+  tps         User?        @relation("TPSPickups", fields: [tpsId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  
+  // Location
+  latitude    Float
+  longitude   Float
+  address     String
+  
+  // Request details
+  description String?
+  status      String       @default("PENDING") // PENDING, ACCEPTED, ON_THE_WAY, PICKED_UP, COMPLETED, CANCELLED
+  scheduledAt DateTime?
+  pickedUpAt  DateTime?
+  
+  // Media (stored as JSON string for SQLite compatibility)
+  photos      String       @default("[]") // JSON array of photo URLs
+  videos      String       @default("[]") // JSON array of video URLs
+  
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  wasteItems  WasteItem[]
+  transaction Transaction?
+}
+
+model WasteItem {
+  id              String        @id @default(cuid())
+  pickupRequestId String
+  pickupRequest   PickupRequest @relation(fields: [pickupRequestId], references: [id], onDelete: Cascade)
+  wasteType       String        // ORGANIC, PLASTIC, PAPER, METAL, GLASS, ELECTRONIC, OTHER
+  estimatedWeight Float?        // in kg
+  actualWeight    Float?        // in kg (filled by TPS)
+  price           Float?        // calculated price
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Transaction {
+  id              String        @id @default(cuid())
+  pickupRequestId String        @unique
+  pickupRequest   PickupRequest @relation(fields: [pickupRequestId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  totalWeight     Float
+  totalPrice      Float
+  isPaid          Boolean       @default(false)
+  paidAt          DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  type      String   // pickup_accepted, pickup_completed, payment, etc.
+  createdAt DateTime @default(now())
+}
+
+// ============================================
+// TPS LOCATIONS - Master Data Lokasi TPS
+// ============================================
+model TPSLocation {
+  id             String   @id @default(cuid())
+  name           String
+  kecamatan      String
+  address        String
+  latitude       Float
+  longitude      Float
+  operatingHours String?
+  phone          String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("TPSLocations")
+}
+
+// ============================================
+// GIS LAYERS - Struktur Data Minimal
+// ============================================
+
+// Tabel Pendukung: Kategori
+model Kategori {
+  id          String       @id @default(cuid())
+  namaKategori String
+  deskripsi   String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  objekPoints ObjekPoint[]
+}
+
+// Tabel Pendukung: Kecamatan
+model Kecamatan {
+  id            String       @id @default(cuid())
+  namaKecamatan String
+  kodeKecamatan String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  // Relations
+  objekPoints   ObjekPoint[]
+  areas         Area[]
+}
+
+// ============================================
+// 1. LAYER POINT - Lokasi Fasilitas
+// ============================================
+model ObjekPoint {
+  pointId      String     @id @default(cuid()) @map("PointID")
+  namaObjek    String     @map("NamaObjek")
+  kategoriId   String     @map("KategoriID")
+  kategori     Kategori   @relation(fields: [kategoriId], references: [id], onDelete: Cascade)
+  latitude     Float      @map("Latitude")
+  longitude    Float      @map("Longitude")
+  deskripsi    String?    @map("Deskripsi")
+  kecamatanId  String     @map("KecamatanID")
+  kecamatan    Kecamatan  @relation(fields: [kecamatanId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@map("objekPoint")
+}
+
+// ============================================
+// 2. LAYER LINE - Jalan/Rute
+// ============================================
+model Jalan {
+  jalanId       String   @id @default(cuid()) @map("JalanID")
+  namaJalan     String   @map("NamaJalan")
+  koordinatJSON String   @map("KoordinatJSON") @db.NVarChar(Max) // polyline GeoJSON
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("Jalan")
+}
+
+// ============================================
+// 3. LAYER POLYGON - Batas Desa/Kecamatan
+// ============================================
+model Area {
+  areaId       String    @id @default(cuid()) @map("AreaID")
+  namaArea     String    @map("NamaArea")
+  polygonJSON  String    @map("PolygonJSON") @db.NVarChar(Max) // GeoJSON
+  kecamatanId  String?   @map("KecamatanID")
+  kecamatan    Kecamatan? @relation(fields: [kecamatanId], references: [id], onDelete: SetNull)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("Area")
+}
