@@ -1,0 +1,13 @@
+This is a binary file placeholder. The actual Excel template will need to be created manually with the following structure:
+
+Columns:
+1. Nama TPS (required)
+2. Kecamatan (required)
+3. Alamat (required)
+4. Latitude (required, number)
+5. Longitude (required, number)
+6. Jam Operasional (optional, default: "06:00 - 18:00")
+7. No. Telepon (optional)
+
+Example row:
+TPS Genteng Kali | Genteng | Jl. Genteng Kali, Genteng, Surabaya | -7.257472 | 112.752090 | 06:00 - 18:00 | 031-12345678

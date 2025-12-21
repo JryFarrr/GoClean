@@ -1,12 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { Eye, EyeOff, Mail, Lock, User, Phone, Loader2, MapPin } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock, User, Phone, Loader2, MapPin, Search } from 'lucide-react'
 
 type UserRole = 'USER' | 'TPS'
+
+interface TPSLocation {
+  id: string
+  name: string
+  kecamatan: string
+  address: string
+  latitude: number
+  longitude: number
+  operatingHours?: string
+  phone?: string
+}
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -19,15 +30,72 @@ export default function RegisterPage() {
     password: '',
     confirmPassword: '',
     // TPS specific
+    selectedTpsId: '',
     tpsName: '',
     address: '',
-    latitude: -6.2088,
-    longitude: 106.8456,
+    latitude: 0,
+    longitude: 0,
     operatingHours: '',
     capacity: ''
   })
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [tpsSearch, setTpsSearch] = useState('')
+  const [showTpsDropdown, setShowTpsDropdown] = useState(false)
+  const [tpsLocations, setTpsLocations] = useState<TPSLocation[]>([])
+  const [loadingTPS, setLoadingTPS] = useState(false)
+
+  // Fetch TPS locations from database
+  useEffect(() => {
+    if (role === 'TPS') {
+      fetchTPSLocations()
+    }
+  }, [role])
+
+  const fetchTPSLocations = async () => {
+    setLoadingTPS(true)
+    try {
+      const res = await fetch('/api/tps-locations')
+      const data = await res.json()
+      if (data.data) {
+        setTpsLocations(data.data)
+      }
+    } catch (error) {
+      console.error('Error fetching TPS locations:', error)
+      toast.error('Gagal memuat lokasi TPS')
+    } finally {
+      setLoadingTPS(false)
+    }
+  }
+
+  // Filter TPS based on search
+  const filteredTPS = useMemo(() => {
+    if (!tpsSearch.trim()) return tpsLocations
+    const search = tpsSearch.toLowerCase()
+    return tpsLocations.filter(tps => 
+      tps.name.toLowerCase().includes(search) ||
+      tps.kecamatan.toLowerCase().includes(search) ||
+      tps.address.toLowerCase().includes(search)
+    )
+  }, [tpsSearch])
+
+  // Handle TPS selection
+  const handleSelectTPS = (tpsId: string) => {
+    const selectedTPS = tpsLocations.find(tps => tps.id === tpsId)
+    if (selectedTPS) {
+      setFormData(prev => ({
+        ...prev,
+        selectedTpsId: tpsId,
+        tpsName: selectedTPS.name,
+        address: selectedTPS.address,
+        latitude: selectedTPS.latitude,
+        longitude: selectedTPS.longitude,
+        operatingHours: selectedTPS.operatingHours || ''
+      }))
+      setTpsSearch(selectedTPS.name)
+      setShowTpsDropdown(false)
+    }
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -44,6 +112,11 @@ export default function RegisterPage() {
 
     if (formData.password.length < 6) {
       toast.error('Password minimal 6 karakter')
+      return
+    }
+
+    if (role === 'TPS' && !formData.selectedTpsId) {
+      toast.error('Silakan pilih TPS dari daftar')
       return
     }
 
@@ -205,82 +278,96 @@ export default function RegisterPage() {
               {/* TPS Specific Fields */}
               {role === 'TPS' && (
                 <>
-                  <div>
+                  {/* TPS Selection with Search */}
+                  <div className="relative">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Nama TPS
-                    </label>
-                    <input
-                      type="text"
-                      name="tpsName"
-                      value={formData.tpsName}
-                      onChange={handleChange}
-                      placeholder="Nama TPS"
-                      required
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Alamat TPS
+                      Pilih TPS *
                     </label>
                     <div className="relative">
-                      <MapPin className="absolute left-3 top-3 text-gray-400" size={20} />
-                      <textarea
-                        name="address"
-                        value={formData.address}
-                        onChange={handleChange}
-                        placeholder="Alamat lengkap TPS"
-                        required
-                        rows={2}
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                      <input
+                        type="text"
+                        value={tpsSearch}
+                        onChange={(e) => {
+                          setTpsSearch(e.target.value)
+                          setShowTpsDropdown(true)
+                        }}
+                        onFocus={() => setShowTpsDropdown(true)}
+                        placeholder="Cari TPS berdasarkan nama atau kecamatan..."
                         className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       />
                     </div>
+                    
+                    {/* Dropdown List */}
+                    {showTpsDropdown && filteredTPS.length > 0 && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        {filteredTPS.map((tps) => (
+                          <button
+                            key={tps.id}
+                            type="button"
+                            onClick={() => handleSelectTPS(tps.id)}
+                            className={`w-full text-left px-4 py-3 hover:bg-green-50 border-b border-gray-100 last:border-b-0 transition ${
+                              formData.selectedTpsId === tps.id ? 'bg-green-50' : ''
+                            }`}
+                          >
+                            <div className="font-medium text-gray-900">{tps.name}</div>
+                            <div className="text-sm text-gray-600">{tps.kecamatan}</div>
+                            <div className="text-xs text-gray-500">{tps.address}</div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {showTpsDropdown && filteredTPS.length === 0 && tpsSearch && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-4 text-center text-gray-500">
+                        TPS tidak ditemukan
+                      </div>
+                    )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Latitude
-                      </label>
-                      <input
-                        type="number"
-                        name="latitude"
-                        value={formData.latitude}
-                        onChange={handleChange}
-                        step="any"
-                        required
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                      />
+                  {/* Display selected TPS details (read-only) */}
+                  {formData.selectedTpsId && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-2">
+                      <h4 className="font-semibold text-green-900 mb-2">Detail TPS yang Dipilih:</h4>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <span className="text-gray-600">Nama:</span>
+                          <p className="font-medium text-gray-900">{formData.tpsName}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Jam Operasional:</span>
+                          <p className="font-medium text-gray-900">{formData.operatingHours || '-'}</p>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-gray-600">Alamat:</span>
+                          <p className="font-medium text-gray-900">{formData.address}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Latitude:</span>
+                          <p className="font-medium text-gray-900">{formData.latitude}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Longitude:</span>
+                          <p className="font-medium text-gray-900">{formData.longitude}</p>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Longitude
-                      </label>
-                      <input
-                        type="number"
-                        name="longitude"
-                        value={formData.longitude}
-                        onChange={handleChange}
-                        step="any"
-                        required
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                      />
-                    </div>
-                  </div>
+                  )}
 
+                  {/* Kapasitas Field */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Jam Operasional
+                      Kapasitas (kg)
                     </label>
                     <input
-                      type="text"
-                      name="operatingHours"
-                      value={formData.operatingHours}
+                      type="number"
+                      name="capacity"
+                      value={formData.capacity}
                       onChange={handleChange}
-                      placeholder="Contoh: 08:00 - 17:00"
+                      placeholder="Contoh: 1000"
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     />
+                    <p className="text-xs text-gray-500 mt-1">Kapasitas maksimal sampah yang dapat ditampung (dalam kilogram)</p>
                   </div>
                 </>
               )}

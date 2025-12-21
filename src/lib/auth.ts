@@ -11,7 +11,7 @@ export const authOptions: NextAuthOptions = {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' }
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) {
           throw new Error('Email dan password harus diisi')
         }
@@ -30,6 +30,9 @@ export const authOptions: NextAuthOptions = {
         if (!isPasswordValid) {
           throw new Error('Password salah')
         }
+
+        // Note: Role check will be done on client side after login
+        // to redirect admin to proper login page
 
         return {
           id: user.id,

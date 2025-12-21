@@ -89,6 +89,17 @@ export default function UserProfilePage() {
       })
 
       if (res.ok) {
+        const result = await res.json()
+        if (result.data) {
+          setProfile({
+            name: result.data.name || '',
+            email: result.data.email || '',
+            phone: result.data.phone || '',
+            address: result.data.address || '',
+            gopayNumber: result.data.gopayNumber || '',
+            whatsappNumber: result.data.whatsappNumber || ''
+          })
+        }
         toast.success('Profil berhasil disimpan')
       } else {
         const error = await res.json()

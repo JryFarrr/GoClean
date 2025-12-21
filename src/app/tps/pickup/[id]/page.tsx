@@ -306,13 +306,18 @@ export default function PickupDetailPage() {
           </div>
 
           {/* Location */}
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h3 className="font-semibold text-lg mb-4 flex items-center">
-              <MapPin className="mr-2 text-green-600" size={20} />
-              Lokasi Penjemputan
-            </h3>
-            <p className="text-gray-700 mb-4">{pickup.address}</p>
-            <div className="h-64 rounded-lg overflow-hidden">
+          <div className="bg-white rounded-xl shadow-md overflow-hidden">
+            {/* Header dengan status */}
+            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className={`w-3 h-3 rounded-full ${statusInfo.color.includes('yellow') ? 'bg-yellow-500' : 'bg-green-500'} animate-pulse`}></div>
+                <h3 className="font-bold text-lg text-gray-800">{statusInfo.label}</h3>
+              </div>
+              <span className="text-sm font-medium text-gray-600">Total: 1 lokasi</span>
+            </div>
+
+            {/* Peta */}
+            <div className="relative h-[500px]">
               <MapComponent
                 center={[pickup.latitude, pickup.longitude]}
                 zoom={15}
@@ -320,20 +325,40 @@ export default function PickupDetailPage() {
                   id: pickup.id,
                   lat: pickup.latitude,
                   lng: pickup.longitude,
-                  title: pickup.address,
+                  title: pickup.user.name,
+                  address: pickup.address,
                   type: 'pickup'
                 }]}
+                highlightedMarkerId={pickup.id}
+                className="h-full w-full"
               />
             </div>
-            <a
-              href={`https://www.google.com/maps/dir/?api=1&destination=${pickup.latitude},${pickup.longitude}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center mt-4 text-blue-600 hover:text-blue-700"
-            >
-              <MapPin size={16} className="mr-2" />
-              Buka di Google Maps
-            </a>
+
+            {/* Info detail di bawah peta */}
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+              <div className="flex items-start space-x-3 mb-3">
+                <MapPin className="text-green-600 flex-shrink-0 mt-1" size={20} />
+                <div className="flex-1">
+                  <p className="font-semibold text-gray-800 mb-1">Alamat Lengkap</p>
+                  <p className="text-gray-600 text-sm">{pickup.address}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+                <div className="text-sm text-gray-500">
+                  📍 {pickup.latitude.toFixed(6)}, {pickup.longitude.toFixed(6)}
+                </div>
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${pickup.latitude},${pickup.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <MapPin size={16} className="mr-2" />
+                  Buka Navigasi
+                </a>
+              </div>
+            </div>
           </div>
 
           {/* Media */}

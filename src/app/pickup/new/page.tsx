@@ -10,7 +10,19 @@ import Link from 'next/link'
 import MediaUploader from '@/components/MediaUploader'
 import WasteItemSelector from '@/components/WasteItemSelector'
 import { useLocationStore } from '@/lib/store'
-import { tpsLocations, getKecamatanList, getTpsByKecamatan, type TPSLocation } from '@/lib/tpsLocations'
+import { SURABAYA_KECAMATAN } from '@/lib/surabayaKecamatan'
+
+interface TPSLocation {
+  id: string
+  name: string
+  kecamatan: string
+  address: string
+  latitude: number
+  longitude: number
+  operatingHours?: string
+  phone?: string
+  isActive: boolean
+}
 
 // Dynamic import for map component to avoid SSR issues
 const MapComponent = dynamic(() => import('@/components/MapComponent'), {
@@ -44,6 +56,8 @@ export default function NewPickupPage() {
   const [searchKecamatan, setSearchKecamatan] = useState('')
   const [tpsMarkers, setTpsMarkers] = useState<any[]>([])
   const [selectedTPS, setSelectedTPS] = useState<TPSLocation | null>(null)
+  const [tpsLocations, setTpsLocations] = useState<TPSLocation[]>([])
+  const [isLoadingTPS, setIsLoadingTPS] = useState(true)
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -51,20 +65,42 @@ export default function NewPickupPage() {
     }
   }, [status, router])
 
-  // Load TPS markers when component mounts
+  // Fetch TPS locations from database
   useEffect(() => {
-    const markers = tpsLocations.map(tps => ({
-      id: tps.id,
-      lat: tps.latitude,
-      lng: tps.longitude,
-      title: tps.name,
-      address: tps.address,
-      type: 'tps' as const,
-      kecamatan: tps.kecamatan,
-      operatingHours: tps.operatingHours,
-      phone: tps.phone
-    }))
-    setTpsMarkers(markers)
+    const fetchTPSLocations = async () => {
+      setIsLoadingTPS(true)
+      try {
+        const res = await fetch('/api/tps-locations')
+        const data = await res.json()
+        
+        if (res.ok && data.data) {
+          setTpsLocations(data.data)
+          
+          // Create markers for map
+          const markers = data.data.map((tps: TPSLocation) => ({
+            id: tps.id,
+            lat: tps.latitude,
+            lng: tps.longitude,
+            title: tps.name,
+            address: tps.address,
+            type: 'tps' as const,
+            kecamatan: tps.kecamatan,
+            operatingHours: tps.operatingHours,
+            phone: tps.phone
+          }))
+          setTpsMarkers(markers)
+        } else {
+          toast.error('Gagal memuat data TPS')
+        }
+      } catch (error) {
+        console.error('Error fetching TPS locations:', error)
+        toast.error('Terjadi kesalahan saat memuat data TPS')
+      } finally {
+        setIsLoadingTPS(false)
+      }
+    }
+
+    fetchTPSLocations()
   }, [])
 
   const handleLocationSelect = (lat: number, lng: number, addr: string) => {
@@ -83,7 +119,7 @@ export default function NewPickupPage() {
 
   const handleKecamatanSelect = (kecamatan: string) => {
     setSelectedKecamatan(kecamatan)
-    const tpsInKecamatan = getTpsByKecamatan(kecamatan)
+    const tpsInKecamatan = tpsLocations.filter(tps => tps.kecamatan === kecamatan)
     if (tpsInKecamatan.length > 0) {
       const firstTPS = tpsInKecamatan[0]
       setSelectedTPS(firstTPS)
@@ -98,13 +134,21 @@ export default function NewPickupPage() {
     toast.success('Lokasi dihapus')
   }
 
-  const filteredKecamatan = getKecamatanList().filter(k => 
-    k.toLowerCase().includes(searchKecamatan.toLowerCase())
+  // Filter kecamatan dari SURABAYA_KECAMATAN yang memiliki TPS
+  const kecamatanWithTPS = Array.from(new Set(tpsLocations.map(tps => tps.kecamatan)))
+  const filteredKecamatan = SURABAYA_KECAMATAN.filter(k => 
+    k.toLowerCase().includes(searchKecamatan.toLowerCase()) &&
+    kecamatanWithTPS.includes(k)
   )
+
+  // Helper function to get TPS by kecamatan
+  const getTpsByKecamatan = (kecamatan: string) => {
+    return tpsLocations.filter(tps => tps.kecamatan === kecamatan)
+  }
 
   const handleSubmit = async () => {
     if (!latitude || !longitude || !address) {
-      toast.error('Pilih lokasi penjemputan terlebih dahulu')
+      toast.error('Pilih TPS tujuan terlebih dahulu')
       return
     }
 
@@ -142,7 +186,7 @@ export default function NewPickupPage() {
         throw new Error(data.error || 'Terjadi kesalahan')
       }
 
-      toast.success('Permintaan penjemputan berhasil dibuat!')
+      toast.success('Permintaan berhasil dikirim!')
       router.push('/pickup/history')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Terjadi kesalahan')
@@ -176,10 +220,10 @@ export default function NewPickupPage() {
         </Link>
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-gray-100">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-            Buat Permintaan Penjemputan
+            Antar/Jemput Sampah
           </h1>
           <p className="text-gray-600 mt-3 text-lg">
-            Ikuti langkah-langkah berikut untuk membuat permintaan penjemputan sampah
+            Pilih untuk mengantarkan sampah ke TPS atau minta penjemputan
           </p>
         </div>
       </div>
@@ -187,7 +231,7 @@ export default function NewPickupPage() {
       {/* Progress Steps */}
       <div className="flex items-center justify-between mb-8">
         {[
-          { num: 1, label: 'Lokasi' },
+          { num: 1, label: 'Pilih TPS' },
           { num: 2, label: 'Foto/Video' },
           { num: 3, label: 'Jenis Sampah' },
           { num: 4, label: 'Konfirmasi' }
@@ -221,10 +265,10 @@ export default function NewPickupPage() {
               <div className="bg-green-500 p-3 rounded-lg">
                 <MapPin className="text-white" size={24} />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900">Pilih Lokasi Penjemputan</h2>
+              <h2 className="text-2xl font-bold text-gray-900">Pilih TPS Terdekat atau Tentukan Lokasi Anda</h2>
             </div>
             <p className="text-gray-600 mb-6">
-              Pilih kecamatan atau klik langsung pada peta untuk memilih lokasi TPS terdekat.
+              Anda bisa memilih TPS terdekat dari daftar, atau langsung menentukan lokasi Anda sendiri di peta.
             </p>
             
             {/* Layout Grid: Map + Sidebar */}
@@ -292,17 +336,24 @@ export default function NewPickupPage() {
                     </div>
                   </div>
 
-                  {/* Search Box */}
-                  <div className="relative mb-3">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                    <input
-                      type="text"
-                      placeholder="Cari kecamatan..."
-                      value={searchKecamatan}
-                      onChange={(e) => setSearchKecamatan(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-                    />
-                  </div>
+                  {/* Loading State */}
+                  {isLoadingTPS ? (
+                    <div className="flex items-center justify-center h-64">
+                      <Loader2 className="animate-spin text-green-600" size={32} />
+                    </div>
+                  ) : (
+                    <>
+                      {/* Search Box */}
+                      <div className="relative mb-3">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                        <input
+                          type="text"
+                          placeholder="Cari kecamatan..."
+                          value={searchKecamatan}
+                          onChange={(e) => setSearchKecamatan(e.target.value)}
+                          className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                        />
+                      </div>
 
                   {/* Kecamatan List */}
                   <div className="space-y-2">
@@ -371,10 +422,12 @@ export default function NewPickupPage() {
                     })}
                   </div>
 
-                  {filteredKecamatan.length === 0 && (
-                    <p className="text-sm text-green-600 text-center py-4">
-                      Kecamatan tidak ditemukan
+                  {filteredKecamatan.length === 0 && !isLoadingTPS && (
+                    <p className="text-sm text-gray-500 text-center py-4">
+                      {searchKecamatan ? 'Kecamatan tidak ditemukan' : 'Belum ada TPS terdaftar'}
                     </p>
+                  )}
+                    </>
                   )}
                 </div>
               </div>
@@ -398,7 +451,7 @@ export default function NewPickupPage() {
               <h2 className="text-2xl font-bold">Upload Foto/Video Sampah</h2>
             </div>
             <p className="text-green-700">
-              Ambil foto atau video sampah Anda untuk memudahkan pihak TPS menilai jenis dan jumlah sampah.
+              Ambil foto atau video sampah Anda untuk membantu pihak TPS mengetahui jenis dan jumlah sampah yang akan diantarkan.
             </p>
 
             <MediaUploader
@@ -433,7 +486,7 @@ export default function NewPickupPage() {
               <h2 className="text-2xl font-bold">Pilih Jenis Sampah</h2>
             </div>
             <p className="text-green-700">
-              Pilih jenis sampah dan perkiraan berat untuk memudahkan TPS mempersiapkan penjemputan.
+              Pilih jenis sampah dan perkiraan berat yang akan Anda antarkan ke TPS.
             </p>
 
             <WasteItemSelector
@@ -457,7 +510,7 @@ export default function NewPickupPage() {
             <div>
               <label className="block text-sm font-medium text-green-700 mb-2">
                 <Calendar size={18} className="inline mr-2" />
-                Jadwal Penjemputan (Opsional)
+                Jadwal Pengantaran (Opsional)
               </label>
               <input
                 type="datetime-local"
@@ -499,7 +552,7 @@ export default function NewPickupPage() {
               <div className="bg-green-50 rounded-lg p-4">
                 <h3 className="font-semibold flex items-center text-green-800">
                   <MapPin size={18} className="mr-2 text-green-600" />
-                  Lokasi Penjemputan
+                  TPS Tujuan
                 </h3>
                 <p className="text-green-700 mt-1">{address}</p>
               </div>
@@ -541,7 +594,7 @@ export default function NewPickupPage() {
                 <div className="bg-green-50 rounded-lg p-4">
                   <h3 className="font-semibold flex items-center text-green-800">
                     <Calendar size={18} className="mr-2 text-green-600" />
-                    Jadwal Penjemputan
+                    Jadwal Pengantaran
                   </h3>
                   <p className="text-green-700 mt-1">
                     {new Date(scheduledAt).toLocaleDateString('id-ID', {

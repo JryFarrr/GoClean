@@ -11,10 +11,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    if (session.user.role !== 'USER') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: {
@@ -24,7 +20,8 @@ export async function GET(req: NextRequest) {
         phone: true,
         address: true,
         gopayNumber: true,
-        whatsappNumber: true
+        whatsappNumber: true,
+        role: true
       }
     })
 
@@ -50,8 +47,9 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Only allow USER role to update profile (not ADMIN or TPS)
     if (session.user.role !== 'USER') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return NextResponse.json({ error: 'Only users can update profile through this endpoint' }, { status: 403 })
     }
 
     const body = await req.json()
@@ -78,7 +76,8 @@ export async function PUT(req: NextRequest) {
         phone: true,
         address: true,
         gopayNumber: true,
-        whatsappNumber: true
+        whatsappNumber: true,
+        role: true
       }
     })
 

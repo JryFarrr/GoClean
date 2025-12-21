@@ -43,15 +43,16 @@ export default function Navbar() {
   const getNavItems = () => {
     if (!session?.user) return []
 
+    const dashboardHref = session.user.role === 'ADMIN' ? '/admin' : '/dashboard'
     const baseItems = [
-      { href: '/dashboard', label: 'Dashboard', icon: Home }
+      { href: dashboardHref, label: 'Dashboard', icon: Home }
     ]
 
     switch (session.user.role) {
       case 'USER':
         return [
           ...baseItems,
-          { href: '/pickup/new', label: 'Jemput Sampah', icon: Truck },
+          { href: '/pickup/new', label: 'Antar/Jemput', icon: Truck },
           { href: '/pickup/history', label: 'Riwayat', icon: MapPin },
           { href: '/transactions', label: 'Transaksi', icon: DollarSign }
         ]
@@ -67,7 +68,7 @@ export default function Navbar() {
           ...baseItems,
           { href: '/admin/users', label: 'Users', icon: Users },
           { href: '/admin/tps', label: 'TPS', icon: Truck },
-          { href: '/admin/pickups', label: 'Penjemputan', icon: MapPin },
+          { href: '/admin/pickups', label: 'Pengantaran', icon: MapPin },
           { href: '/admin/settings', label: 'Settings', icon: Settings }
         ]
       default:
@@ -104,7 +105,7 @@ export default function Navbar() {
 
                 {/* Notifications */}
                 <Link
-                  href="/notifications"
+                  href={session.user.role === 'ADMIN' ? '/admin/notifications' : '/notifications'}
                   className="relative p-2 hover:bg-green-700 rounded-full transition"
                 >
                   <Bell size={20} />
@@ -130,7 +131,13 @@ export default function Navbar() {
                   {isProfileOpen && (
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
                       <Link
-                        href={session.user.role === 'TPS' ? '/tps/profile' : '/profile'}
+                        href={
+                          session.user.role === 'ADMIN' 
+                            ? '/admin/profile' 
+                            : session.user.role === 'TPS' 
+                            ? '/tps/profile' 
+                            : '/profile'
+                        }
                         className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
                         onClick={() => setIsProfileOpen(false)}
                       >
@@ -196,7 +203,7 @@ export default function Navbar() {
                   </Link>
                 ))}
                 <Link
-                  href="/notifications"
+                  href={session.user.role === 'ADMIN' ? '/admin/notifications' : '/notifications'}
                   className="flex items-center space-x-2 px-4 py-3 hover:bg-green-700"
                   onClick={() => setIsMenuOpen(false)}
                 >
@@ -209,7 +216,13 @@ export default function Navbar() {
                   )}
                 </Link>
                 <Link
-                  href={session.user.role === 'TPS' ? '/tps/profile' : '/profile'}
+                  href={
+                    session.user.role === 'ADMIN' 
+                      ? '/admin/profile' 
+                      : session.user.role === 'TPS' 
+                      ? '/tps/profile' 
+                      : '/profile'
+                  }
                   className="flex items-center space-x-2 px-4 py-3 hover:bg-green-700"
                   onClick={() => setIsMenuOpen(false)}
                 >

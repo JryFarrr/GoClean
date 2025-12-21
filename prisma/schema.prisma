@@ -138,6 +138,25 @@ model Notification {
 }
 
 // ============================================
+// TPS LOCATIONS - Master Data Lokasi TPS
+// ============================================
+model TPSLocation {
+  id             String   @id @default(cuid())
+  name           String
+  kecamatan      String
+  address        String
+  latitude       Float
+  longitude      Float
+  operatingHours String?
+  phone          String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("TPSLocations")
+}
+
+// ============================================
 // GIS LAYERS - Struktur Data Minimal
 // ============================================
 

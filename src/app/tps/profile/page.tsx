@@ -35,6 +35,8 @@ interface TPSProfileData {
   gopayNumber?: string
   whatsappNumber?: string
   operatingHours?: string
+  capacity?: number
+  description?: string
 }
 
 export default function TPSProfilePage() {
@@ -50,7 +52,9 @@ export default function TPSProfilePage() {
     phone: '',
     gopayNumber: '',
     whatsappNumber: '',
-    operatingHours: ''
+    operatingHours: '',
+    capacity: undefined,
+    description: ''
   })
 
   useEffect(() => {
@@ -80,7 +84,9 @@ export default function TPSProfilePage() {
           phone: data.data.phone || '',
           gopayNumber: data.data.gopayNumber || '',
           whatsappNumber: data.data.whatsappNumber || '',
-          operatingHours: data.data.operatingHours || ''
+          operatingHours: data.data.operatingHours || '',
+          capacity: data.data.capacity,
+          description: data.data.description || ''
         })
       }
     } catch (error) {
@@ -228,7 +234,7 @@ export default function TPSProfilePage() {
               />
             </div>
 
-            {profile.latitude && profile.longitude && (
+            {profile.latitude && profile.longitude && !isNaN(profile.latitude) && !isNaN(profile.longitude) && (
               <p className="text-sm text-green-600">
                 Koordinat: {profile.latitude.toFixed(6)}, {profile.longitude.toFixed(6)}
               </p>
@@ -316,6 +322,55 @@ export default function TPSProfilePage() {
             className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
             placeholder="Contoh: Senin - Sabtu, 07:00 - 17:00"
           />
+        </div>
+
+        {/* Capacity */}
+        <div className="bg-white rounded-xl shadow-md p-6 border border-green-100">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+              <Building2 className="text-yellow-600" size={20} />
+            </div>
+            <div>
+              <h3 className="font-semibold text-green-800">Kapasitas</h3>
+              <p className="text-sm text-green-600">Kapasitas maksimal TPS (dalam kilogram)</p>
+            </div>
+          </div>
+          <input
+            type="number"
+            value={profile.capacity !== undefined && profile.capacity !== null ? profile.capacity : ''}
+            onChange={(e) => {
+              const value = e.target.value
+              setProfile(prev => ({ 
+                ...prev, 
+                capacity: value === '' ? undefined : parseInt(value) || undefined 
+              }))
+            }}
+            className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            placeholder="Contoh: 1000"
+            min="0"
+          />
+          <p className="text-xs text-gray-500 mt-2">Opsional: Masukkan kapasitas dalam kg</p>
+        </div>
+
+        {/* Description */}
+        <div className="bg-white rounded-xl shadow-md p-6 border border-green-100">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+              <Building2 className="text-indigo-600" size={20} />
+            </div>
+            <div>
+              <h3 className="font-semibold text-green-800">Deskripsi</h3>
+              <p className="text-sm text-green-600">Informasi tambahan tentang TPS</p>
+            </div>
+          </div>
+          <textarea
+            value={profile.description || ''}
+            onChange={(e) => setProfile(prev => ({ ...prev, description: e.target.value }))}
+            className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            rows={4}
+            placeholder="Deskripsikan TPS Anda, jenis sampah yang diterima, fasilitas, dll..."
+          />
+          <p className="text-xs text-gray-500 mt-2">Opsional: Berikan informasi yang membantu pengguna memahami layanan TPS</p>
         </div>
       </div>
 

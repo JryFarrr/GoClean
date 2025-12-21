@@ -5,11 +5,11 @@ import { signIn, signOut, useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { Eye, EyeOff, Mail, Lock, Loader2 } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock, Loader2, Shield, ArrowLeft } from 'lucide-react'
 
-export default function LoginPage() {
+export default function AdminLoginPage() {
   const router = useRouter()
-  const { status } = useSession()
+  const { data: session, status, update } = useSession()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -18,9 +18,15 @@ export default function LoginPage() {
   // Redirect if already logged in
   useEffect(() => {
     if (status === 'authenticated') {
-      router.replace('/dashboard')
+      // Check if admin
+      if (session?.user?.role === 'ADMIN') {
+        router.replace('/admin')
+      } else {
+        // Not admin, redirect to regular login
+        router.replace('/dashboard')
+      }
     }
-  }, [status, router])
+  }, [status, session, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,36 +41,44 @@ export default function LoginPage() {
 
       if (result?.error) {
         toast.error(result.error)
+        setIsLoading(false)
       } else if (result?.ok) {
-        // Check user role after successful login
+        // Force session update
+        await update()
+        
+        // Small delay to ensure session is updated
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+        // Fetch fresh session data
         const response = await fetch('/api/user/profile')
         const userData = await response.json()
         
-        console.log('User data from profile:', userData) // Debug log
+        console.log('User data after login:', userData) // Debug log
         
         // Check if userData has data property (wrapped response)
         const userRole = userData.data?.role || userData.role
         
         if (userRole === 'ADMIN') {
-          // Admin TIDAK BOLEH login di halaman ini - langsung logout
-          toast.error('Akses ditolak! Admin harus login di halaman admin.')
+          toast.success('Login admin berhasil!')
+          router.replace('/admin')
+          router.refresh() // Force page refresh
+        } else {
+          // USER atau TPS TIDAK BOLEH login di halaman ini - langsung logout
+          toast.error('Akses ditolak! User & TPS harus login di halaman biasa.')
           // Force sign out immediately
           await signOut({ redirect: false })
           setIsLoading(false)
           // Redirect to home page
           setTimeout(() => {
-            router.push('/')
+            router.replace('/')
           }, 1500)
           return // Stop execution
-        } else {
-          // USER atau TPS boleh login
-          toast.success('Login berhasil!')
-          router.replace('/dashboard')
         }
       }
     } catch (error) {
       toast.error('Terjadi kesalahan saat login')
       console.error(error)
+      setIsLoading(false)
     } finally {
       setIsLoading(false)
     }
@@ -73,8 +87,8 @@ export default function LoginPage() {
   // Show loading while checking auth status
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100">
-        <Loader2 className="animate-spin text-green-600" size={48} />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-orange-100">
+        <Loader2 className="animate-spin text-red-600" size={48} />
       </div>
     )
   }
@@ -82,34 +96,46 @@ export default function LoginPage() {
   // Don't render form if authenticated (will redirect)
   if (status === 'authenticated') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100">
-        <Loader2 className="animate-spin text-green-600" size={48} />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-orange-100">
+        <Loader2 className="animate-spin text-red-600" size={48} />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100 py-12 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-orange-100 py-12 px-4">
       <div className="max-w-md w-full">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+        {/* Back to main login */}
+        <div className="mb-4">
+          <Link 
+            href="/login" 
+            className="inline-flex items-center text-red-700 hover:text-red-900 font-medium"
+          >
+            <ArrowLeft size={20} className="mr-2" />
+            Kembali ke Login Biasa
+          </Link>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-xl p-8 border-2 border-red-200">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-white text-2xl font-bold">G</span>
+            <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Shield className="text-white" size={32} />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">Masuk ke GoClean</h1>
-            <p className="text-gray-600 mt-2">Selamat datang kembali!</p>
-            <p className="text-sm text-gray-500 mt-1">Login untuk User & TPS</p>
+            <h1 className="text-2xl font-bold text-gray-900">Login Admin</h1>
+            <p className="text-red-600 mt-2 font-medium">Akses Khusus Administrator</p>
+            <p className="text-gray-500 text-sm mt-1">Hanya untuk pengelola sistem GoClean</p>
           </div>
 
-          {/* Admin Warning */}
-          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-3">
-            <p className="text-sm text-amber-800">
-              ⚠️ <strong>Admin:</strong> Gunakan halaman{' '}
-              <Link href="/admin/login" className="underline font-semibold text-amber-900 hover:text-amber-700">
-                login khusus admin
-              </Link>
-            </p>
+          {/* Warning Box */}
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start">
+              <Shield className="text-red-600 mt-0.5 mr-3 flex-shrink-0" size={20} />
+              <div className="text-sm text-red-800">
+                <p className="font-semibold mb-1">Perhatian:</p>
+                <p>Halaman ini khusus untuk administrator. Akses tidak sah akan dicatat.</p>
+              </div>
+            </div>
           </div>
 
           {/* Form */}
@@ -117,7 +143,7 @@ export default function LoginPage() {
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email
+                Email Admin
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -125,9 +151,9 @@ export default function LoginPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="nama@email.com"
+                  placeholder="admin@goclean.com"
                   required
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition"
                 />
               </div>
             </div>
@@ -143,9 +169,9 @@ export default function LoginPage() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Masukkan password"
+                  placeholder="Masukkan password admin"
                   required
-                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
+                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition"
                 />
                 <button
                   type="button"
@@ -157,26 +183,22 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Forgot Password */}
-            <div className="text-right">
-              <Link href="/forgot-password" className="text-sm text-green-600 hover:underline">
-                Lupa password?
-              </Link>
-            </div>
-
             {/* Submit Button */}
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition flex items-center justify-center space-x-2"
+              className="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition flex items-center justify-center space-x-2"
             >
               {isLoading ? (
                 <>
                   <Loader2 className="animate-spin" size={20} />
-                  <span>Memproses...</span>
+                  <span>Memverifikasi...</span>
                 </>
               ) : (
-                <span>Masuk</span>
+                <>
+                  <Shield size={20} />
+                  <span>Login sebagai Admin</span>
+                </>
               )}
             </button>
           </form>
@@ -188,38 +210,21 @@ export default function LoginPage() {
             <div className="flex-1 border-t border-gray-300"></div>
           </div>
 
-          {/* Register Link */}
+          {/* Register Admin Link */}
           <p className="text-center text-gray-600">
-            Belum punya akun?{' '}
-            <Link href="/register" className="text-green-600 font-semibold hover:underline">
-              Daftar sekarang
+            Belum punya akun admin?{' '}
+            <Link href="/admin/register" className="text-red-600 font-semibold hover:underline">
+              Daftar Admin Baru
             </Link>
           </p>
         </div>
 
-        {/* Admin Login Link */}
-        <div className="mt-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-xl shadow p-4 border border-red-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold text-red-800">👨‍💼 Anda seorang Admin?</p>
-              <p className="text-xs text-red-600 mt-0.5">Gunakan halaman login khusus admin</p>
-            </div>
-            <Link 
-              href="/admin/login" 
-              className="px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition whitespace-nowrap"
-            >
-              Login Admin
-            </Link>
-          </div>
-        </div>
-
-        {/* Demo Accounts */}
-        <div className="mt-4 bg-white rounded-xl shadow p-4">
-          <p className="text-sm text-gray-500 mb-2">Demo accounts:</p>
+        {/* Demo Account */}
+        <div className="mt-6 bg-white rounded-xl shadow p-4 border border-red-100">
+          <p className="text-sm text-gray-500 mb-2">Demo admin account:</p>
           <div className="text-xs text-gray-400 space-y-1">
-            <p>User: user@goclean.com / user123</p>
-            <p>TPS: tps@goclean.com / tps123</p>
-            <p>Admin: admin@goclean.com / admin123</p>
+            <p>Email: admin@goclean.com</p>
+            <p>Password: admin123</p>
           </div>
         </div>
       </div>

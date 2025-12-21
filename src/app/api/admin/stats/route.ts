@@ -20,7 +20,9 @@ export async function GET() {
       completedPickups,
       totalTransactions,
       recentPickups,
-      recentTransactions
+      recentTransactions,
+      wasteStats,
+      wasteByTPS
     ] = await Promise.all([
       prisma.user.count({ where: { role: 'USER' } }),
       prisma.user.count({ where: { role: 'TPS' } }),
@@ -28,7 +30,7 @@ export async function GET() {
       prisma.pickupRequest.count({ where: { status: 'PENDING' } }),
       prisma.pickupRequest.count({ where: { status: 'COMPLETED' } }),
       prisma.transaction.aggregate({
-        _sum: { totalPrice: true },
+        _sum: { totalPrice: true, totalWeight: true },
         _count: true
       }),
       prisma.pickupRequest.findMany({
@@ -50,8 +52,84 @@ export async function GET() {
             }
           }
         }
+      }),
+      // Get waste statistics by type
+      prisma.wasteItem.groupBy({
+        by: ['wasteType'],
+        _sum: {
+          actualWeight: true
+        },
+        _count: true
+      }),
+      // Get waste statistics by TPS
+      prisma.pickupRequest.findMany({
+        where: {
+          status: 'COMPLETED',
+          tpsId: { not: null }
+        },
+        include: {
+          tps: {
+            select: {
+              name: true,
+              tpsProfile: {
+                select: {
+                  tpsName: true
+                }
+              }
+            }
+          },
+          wasteItems: {
+            select: {
+              wasteType: true,
+              actualWeight: true
+            }
+          },
+          transaction: {
+            select: {
+              totalWeight: true,
+              totalPrice: true
+            }
+          }
+        }
       })
     ])
+
+    // Process waste by TPS
+    const tpsWasteMap = new Map()
+    wasteByTPS.forEach((pickup) => {
+      if (pickup.tps) {
+        const tpsName = pickup.tps.tpsProfile?.tpsName || pickup.tps.name
+        const tpsId = pickup.tpsId!
+        
+        if (!tpsWasteMap.has(tpsId)) {
+          tpsWasteMap.set(tpsId, {
+            tpsName,
+            totalWeight: 0,
+            totalRevenue: 0,
+            pickupCount: 0,
+            wasteTypes: {}
+          })
+        }
+        
+        const tpsData = tpsWasteMap.get(tpsId)
+        tpsData.pickupCount += 1
+        tpsData.totalWeight += pickup.transaction?.totalWeight || 0
+        tpsData.totalRevenue += pickup.transaction?.totalPrice || 0
+        
+        pickup.wasteItems.forEach((item) => {
+          if (item.actualWeight) {
+            if (!tpsData.wasteTypes[item.wasteType]) {
+              tpsData.wasteTypes[item.wasteType] = 0
+            }
+            tpsData.wasteTypes[item.wasteType] += item.actualWeight
+          }
+        })
+      }
+    })
+
+    const wasteByTPSArray = Array.from(tpsWasteMap.values())
+      .sort((a, b) => b.totalWeight - a.totalWeight)
+      .slice(0, 10) // Top 10 TPS
 
     return NextResponse.json({
       stats: {
@@ -61,8 +139,15 @@ export async function GET() {
         pendingPickups,
         completedPickups,
         totalTransactions: totalTransactions._count,
-        totalRevenue: totalTransactions._sum.totalPrice || 0
+        totalRevenue: totalTransactions._sum.totalPrice || 0,
+        totalWaste: totalTransactions._sum.totalWeight || 0
       },
+      wasteStats: wasteStats.map(stat => ({
+        wasteType: stat.wasteType,
+        totalWeight: stat._sum.actualWeight || 0,
+        count: stat._count
+      })),
+      wasteByTPS: wasteByTPSArray,
       recentPickups,
       recentTransactions
     })

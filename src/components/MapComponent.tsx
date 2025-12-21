@@ -35,6 +35,7 @@ interface MapComponentProps {
   currentLng?: number
   className?: string
   selectedTPSId?: string // ID TPS yang dipilih dari panel kecamatan
+  highlightedMarkerId?: string // ID marker yang akan di-highlight
 }
 
 export default function MapComponent({
@@ -51,7 +52,8 @@ export default function MapComponent({
   currentLat = 0,
   currentLng = 0,
   className = 'h-[400px] w-full',
-  selectedTPSId: externalSelectedTPSId = '' // TPS yang dipilih dari luar
+  selectedTPSId: externalSelectedTPSId = '', // TPS yang dipilih dari luar
+  highlightedMarkerId = '' // Marker yang akan di-highlight dengan animasi
 }: MapComponentProps) {
   const mapRef = useRef<L.Map | null>(null)
   const mapContainerRef = useRef<HTMLDivElement>(null)
@@ -74,39 +76,52 @@ export default function MapComponent({
   const highlightMarkerRef = useRef<L.Marker | null>(null)
 
   // Custom icons
-  const createIcon = (type: string, status?: string) => {
+  const createIcon = (type: string, status?: string, isHighlighted: boolean = false) => {
     const colors = {
       user: '#3B82F6',
       tps: '#10B981',
       pickup: '#F59E0B',
       selected: '#EF4444',
+      highlighted: '#DC2626', // Merah terang untuk highlight
       PENDING: '#F59E0B',
       ACCEPTED: '#3B82F6',
       ON_THE_WAY: '#8B5CF6',
       PICKED_UP: '#10B981'
     }
     
-    const color = status && colors[status as keyof typeof colors] 
-      ? colors[status as keyof typeof colors]
-      : colors[type as keyof typeof colors] || colors.pickup
+    const color = isHighlighted 
+      ? colors.highlighted
+      : status && colors[status as keyof typeof colors] 
+        ? colors[status as keyof typeof colors]
+        : colors[type as keyof typeof colors] || colors.pickup
+    
+    const size = isHighlighted ? 48 : 32
+    const pulse = isHighlighted ? 'animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;' : ''
     
     return L.divIcon({
       className: 'custom-marker',
       html: `
+        <style>
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+          }
+        </style>
         <div style="
           background-color: ${color};
-          width: 32px;
-          height: 32px;
+          width: ${size}px;
+          height: ${size}px;
           border-radius: 50% 50% 50% 0;
           transform: rotate(-45deg);
-          border: 3px solid white;
-          box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+          border: ${isHighlighted ? '4px' : '3px'} solid white;
+          box-shadow: 0 ${isHighlighted ? '6px 16px' : '3px 8px'} rgba(0,0,0,${isHighlighted ? '0.6' : '0.4'});
           cursor: pointer;
+          ${pulse}
         ">
           <div style="
             transform: rotate(45deg);
             color: white;
-            font-size: 16px;
+            font-size: ${isHighlighted ? '24px' : '16px'};
             display: flex;
             align-items: center;
             justify-content: center;
@@ -117,9 +132,9 @@ export default function MapComponent({
           </div>
         </div>
       `,
-      iconSize: [32, 32],
-      iconAnchor: [16, 32],
-      popupAnchor: [0, -32]
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size],
+      popupAnchor: [0, -size]
     })
   }
 
@@ -262,15 +277,25 @@ export default function MapComponent({
 
     // Add new markers
     markers.forEach((marker) => {
+      // Check if this marker should be highlighted
+      const isHighlighted = highlightedMarkerId && marker.id === highlightedMarkerId
       // Gunakan warna merah jika TPS ini dipilih
       const isSelected = marker.id === selectedTPSId
       const iconType = isSelected ? 'selected' : (marker.type || 'pickup')
       
       const leafletMarker = L.marker([marker.lat, marker.lng], {
-        icon: createIcon(iconType, marker.status)
+        icon: createIcon(iconType, marker.status, isHighlighted)
       }).addTo(mapRef.current!)
 
       markersLayerRef.current.push(leafletMarker)
+      
+      // Jika marker di-highlight, pan ke marker dan open popup
+      if (isHighlighted) {
+        mapRef.current?.setView([marker.lat, marker.lng], 16, { animate: true })
+        setTimeout(() => {
+          leafletMarker.openPopup()
+        }, 500)
+      }
 
       // Create popup content with photos
       let popupContent = `<div style="min-width: 200px; max-width: 300px;">`
@@ -369,7 +394,7 @@ export default function MapComponent({
       const bounds = L.latLngBounds(markers.map(m => [m.lat, m.lng]))
       mapRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 })
     }
-  }, [markers, selectedTPSId, forceRefresh]) // Tambahkan forceRefresh untuk force re-render
+  }, [markers, selectedTPSId, forceRefresh, highlightedMarkerId]) // Tambahkan highlightedMarkerId untuk trigger re-render saat highlight berubah
 
   // Update markers visibility based on filtered markers (highlight filtered, dim others)
   useEffect(() => {

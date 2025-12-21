@@ -67,8 +67,10 @@ export default function DashboardPage() {
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.replace('/login')
+    } else if (status === 'authenticated' && session?.user?.role === 'ADMIN') {
+      router.replace('/admin')
     }
-  }, [status, router])
+  }, [status, session, router])
 
   useEffect(() => {
     if (status === 'authenticated' && session?.user) {
@@ -264,8 +266,8 @@ export default function DashboardPage() {
               <Plus size={28} className="text-green-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-lg text-gray-800">Jemput Sampah</h3>
-              <p className="text-gray-600 text-sm">Buat permintaan penjemputan</p>
+              <h3 className="font-semibold text-lg text-gray-800">Antar/Jemput Sampah</h3>
+              <p className="text-gray-600 text-sm">Antarkan ke TPS atau minta dijemput</p>
             </div>
           </Link>
 
