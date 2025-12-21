@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Loader2, MapPin, Phone, User, Check, X, Truck, Eye, AlertCircle } from 'lucide-react'
+import { Loader2, MapPin, Phone, User, Check, X, Truck, Eye, AlertCircle, ArrowLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { parseJsonArray } from '@/lib/utils'
 
@@ -36,6 +36,16 @@ interface PickupRequest {
   scheduledAt?: string
   tpsId?: string
   selectedTPS?: TPSLocationData
+  tps?: {
+    id: string
+    name: string
+    phone?: string
+    tpsProfile?: {
+      tpsName: string
+      address: string
+      phone?: string
+    }
+  }
   user: {
     id: string
     name: string
@@ -284,42 +294,44 @@ export default function TPSRequestsPage() {
                 </div>
               </div>
 
-              {/* TPS Selection Info */}
-              {pickup.tpsId && pickup.selectedTPS ? (
-                <div className="mb-4 p-3 bg-green-50 border border-green-300 rounded-lg">
-                  <p className="text-sm font-semibold text-green-800 mb-2 flex items-center">
-                    <Check size={16} className="mr-2 text-green-600" />
-                    TPS Terpilih
-                  </p>
-                  <p className="text-sm text-green-700 font-medium">{pickup.selectedTPS.name}</p>
-                  <p className="text-xs text-green-600 mt-1">{pickup.selectedTPS.address}</p>
-                  {pickup.selectedTPS.operatingHours && (
-                    <p className="text-xs text-green-600 mt-1">⏰ {pickup.selectedTPS.operatingHours}</p>
-                  )}
-                </div>
-              ) : (
-                (() => {
-                  const nearestTPS = getNearestTPS(pickup.latitude, pickup.longitude)
-                  const distance = nearestTPS ? calculateDistance(pickup.latitude, pickup.longitude, nearestTPS.latitude, nearestTPS.longitude) : 0
-                  
-                  return nearestTPS ? (
-                    <div className="mb-4 p-3 bg-blue-50 border border-blue-300 rounded-lg">
-                      <p className="text-sm font-semibold text-blue-800 mb-2 flex items-center">
-                        <AlertCircle size={16} className="mr-2 text-blue-600" />
-                        TPS Terdekat Direkomendasikan
-                      </p>
-                      <p className="text-sm text-blue-700 font-medium">{nearestTPS.name}</p>
-                      <p className="text-xs text-blue-600 mt-1">{nearestTPS.address}</p>
-                      <p className="text-xs text-blue-600 mt-1">
-                        <strong>Jarak:</strong> {distance.toFixed(2)} km
-                      </p>
-                      {nearestTPS.operatingHours && (
-                        <p className="text-xs text-blue-600 mt-1">⏰ {nearestTPS.operatingHours}</p>
-                      )}
-                    </div>
-                  ) : null
-                })()
-              )}
+              {/* TPS Selection Info - Always show recommended TPS for TPS role */}
+              {(() => {
+                const nearestTPS = getNearestTPS(pickup.latitude, pickup.longitude)
+                const distance = nearestTPS ? calculateDistance(pickup.latitude, pickup.longitude, nearestTPS.latitude, nearestTPS.longitude) : 0
+                
+                return nearestTPS ? (
+                  <div className="mb-4 p-3 bg-green-50 border border-green-300 rounded-lg">
+                    <p className="text-sm font-semibold text-green-800 mb-2 flex items-center">
+                      <Check size={16} className="mr-2 text-green-600" />
+                      TPS Terpilih
+                    </p>
+                    <p className="text-sm text-green-700 font-medium">{nearestTPS.name}</p>
+                    <p className="text-xs text-green-600 mt-1">{nearestTPS.address}</p>
+                    <p className="text-xs text-green-600 mt-1">
+                      <strong>Jarak:</strong> {distance.toFixed(2)} km
+                    </p>
+                    {nearestTPS.operatingHours && (
+                      <p className="text-xs text-green-600 mt-1">⏰ {nearestTPS.operatingHours}</p>
+                    )}
+                    
+                    {/* Show which TPS confirmed if status is not PENDING */}
+                    {pickup.status !== 'PENDING' && pickup.tpsId && pickup.tps && (
+                      <div className="mt-3 pt-3 border-t border-green-300">
+                        <p className="text-xs font-semibold text-green-800 mb-1">✓ Dikonfirmasi oleh:</p>
+                        <p className="text-xs text-green-700 font-medium">
+                          {pickup.tps.tpsProfile?.tpsName || pickup.tps.name}
+                        </p>
+                        {pickup.tps.tpsProfile?.address && (
+                          <p className="text-xs text-green-600 mt-0.5">{pickup.tps.tpsProfile.address}</p>
+                        )}
+                        {pickup.tps.tpsProfile?.phone && (
+                          <p className="text-xs text-green-600 mt-0.5">📞 {pickup.tps.tpsProfile.phone}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : null
+              })()}
 
               {/* Transaction Status */}
               {pickup.transaction && (
@@ -402,6 +414,13 @@ export default function TPSRequestsPage() {
                       <MapPin size={18} className="mr-1" />
                       Navigasi
                     </button>
+                    <button
+                      onClick={() => handleStatusUpdate(pickup.id, 'PENDING')}
+                      className="flex items-center justify-center px-4 py-2 bg-orange-100 text-orange-600 rounded-lg hover:bg-orange-200 transition"
+                      title="Kembalikan ke Menunggu"
+                    >
+                      <ArrowLeft size={18} />
+                    </button>
                   </>
                 )}
 
@@ -420,18 +439,34 @@ export default function TPSRequestsPage() {
                     >
                       <MapPin size={18} />
                     </button>
+                    <button
+                      onClick={() => handleStatusUpdate(pickup.id, 'ACCEPTED')}
+                      className="flex items-center justify-center px-4 py-2 bg-orange-100 text-orange-600 rounded-lg hover:bg-orange-200 transition"
+                      title="Kembalikan ke Diterima"
+                    >
+                      <ArrowLeft size={18} />
+                    </button>
                   </>
                 )}
 
                 {pickup.status === 'PICKED_UP' && (
                   <>
                     {!pickup.transaction ? (
-                      <Link
-                        href={`/tps/transaction/${pickup.id}`}
-                        className="flex-1 flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-                      >
-                        Input Transaksi & Bayar
-                      </Link>
+                      <>
+                        <Link
+                          href={`/tps/transaction/${pickup.id}`}
+                          className="flex-1 flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                        >
+                          Input Transaksi & Bayar
+                        </Link>
+                        <button
+                          onClick={() => handleStatusUpdate(pickup.id, 'ON_THE_WAY')}
+                          className="flex items-center justify-center px-4 py-2 bg-orange-100 text-orange-600 rounded-lg hover:bg-orange-200 transition"
+                          title="Kembalikan ke Dalam Perjalanan"
+                        >
+                          <ArrowLeft size={18} />
+                        </button>
+                      </>
                     ) : (
                       <div className="flex-1 p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
                         <p className="text-blue-700 font-medium text-sm">💰 Menunggu verifikasi user</p>

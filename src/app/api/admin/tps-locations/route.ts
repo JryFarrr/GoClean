@@ -3,16 +3,34 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 
-// GET - Fetch all TPS locations
+// GET - Fetch all TPS locations with pagination support
 export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url)
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '10')
+    const skip = (page - 1) * limit
+
+    // Get total count for pagination
+    const totalCount = await prisma.tPSLocation.count()
+    
     const tpsLocations = await prisma.tPSLocation.findMany({
+      skip,
+      take: limit,
       orderBy: {
         createdAt: 'desc'
       }
     })
 
-    return NextResponse.json({ data: tpsLocations })
+    return NextResponse.json({ 
+      data: tpsLocations,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit)
+      }
+    })
   } catch (error) {
     console.error('Get TPS locations error:', error)
     return NextResponse.json(

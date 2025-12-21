@@ -66,6 +66,12 @@ export default function AdminTPSListPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const itemsPerPage = 10
   const [newTpsData, setNewTpsData] = useState({
     tpsName: '',
     kecamatan: '',
@@ -92,7 +98,7 @@ export default function AdminTPSListPage() {
     }
   }, [session])
 
-  const fetchTPSList = async () => {
+  const fetchTPSList = async (page = currentPage) => {
     setIsLoading(true)
     try {
       // Fetch TPS accounts (users with role TPS)
@@ -100,10 +106,17 @@ export default function AdminTPSListPage() {
       const usersData = await usersRes.json()
       setTpsList(Array.isArray(usersData.data) ? usersData.data : [])
 
-      // Fetch TPS locations from database
-      const locationsRes = await fetch('/api/admin/tps-locations')
+      // Fetch TPS locations from database with pagination
+      const locationsRes = await fetch(`/api/admin/tps-locations?page=${page}&limit=${itemsPerPage}`)
       const locationsData = await locationsRes.json()
       setTpsLocations(Array.isArray(locationsData.data) ? locationsData.data : [])
+      
+      // Update pagination info
+      if (locationsData.pagination) {
+        setTotalPages(locationsData.pagination.totalPages)
+        setTotalCount(locationsData.pagination.totalCount)
+        setCurrentPage(locationsData.pagination.page)
+      }
     } catch (error) {
       console.error('Error fetching TPS data:', error)
       toast.error('Gagal memuat daftar TPS')
@@ -168,8 +181,9 @@ export default function AdminTPSListPage() {
           operatingHours: '',
           phone: ''
         })
-        // Refresh list if needed
-        fetchTPSList()
+        // Refresh list and reset to page 1
+        setCurrentPage(1)
+        fetchTPSList(1)
       } else {
         console.error('Error response:', data)
         const errorMessage = data?.error || data?.message || 'Gagal menambahkan lokasi TPS'
@@ -236,7 +250,8 @@ export default function AdminTPSListPage() {
         }
 
         setShowImportModal(false)
-        fetchTPSList() // Refresh list
+        setCurrentPage(1)
+        fetchTPSList(1) // Refresh list and reset to page 1
       } else {
         toast.error(data.error || 'Gagal mengimpor data')
       }
@@ -378,7 +393,8 @@ export default function AdminTPSListPage() {
         toast.success('Lokasi TPS berhasil dihapus!')
         setShowDeleteModal(false)
         setLocationToDelete(null)
-        fetchTPSList() // Refresh list
+        setCurrentPage(1)
+        fetchTPSList(1) // Refresh list and reset to page 1
       } else {
         toast.error(data.error || 'Gagal menghapus lokasi TPS')
       }
@@ -402,7 +418,8 @@ export default function AdminTPSListPage() {
       if (res.ok) {
         toast.success(data.message)
         setShowResetModal(false)
-        fetchTPSList() // Refresh list
+        setCurrentPage(1)
+        fetchTPSList(1) // Refresh list and reset to page 1
       } else {
         toast.error(data.error || 'Gagal mereset TPS')
       }
@@ -467,7 +484,7 @@ export default function AdminTPSListPage() {
           <div className="flex items-center space-x-3">
             <MapPin className="text-green-600" size={32} />
             <div>
-              <p className="text-3xl font-bold text-green-800">{tpsLocations.length}</p>
+              <p className="text-3xl font-bold text-green-800">{totalCount}</p>
               <p className="text-green-700">Total TPS Terdaftar</p>
             </div>
           </div>
@@ -500,7 +517,14 @@ export default function AdminTPSListPage() {
 
       {/* TPS List */}
       <div className="bg-white rounded-xl shadow-md p-6 border border-green-100">
-        <h2 className="text-xl font-bold text-green-800 mb-6">📋 Daftar Semua TPS</h2>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-green-800">📋 Daftar Semua TPS</h2>
+          {!isLoading && totalCount > 0 && (
+            <p className="text-sm text-gray-600">
+              Menampilkan {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalCount)} dari {totalCount} TPS
+            </p>
+          )}
+        </div>
 
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
@@ -521,6 +545,9 @@ export default function AdminTPSListPage() {
                 location.name.toLowerCase().includes(tps.tpsProfile?.tpsName?.toLowerCase() || '')
               )
 
+              // Calculate the actual number based on pagination
+              const itemNumber = ((currentPage - 1) * itemsPerPage) + index + 1
+
               return (
                 <div
                   key={location.id}
@@ -537,7 +564,7 @@ export default function AdminTPSListPage() {
                         <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg ${
                           hasAccount ? 'bg-green-600' : 'bg-gray-400'
                         }`}>
-                          {index + 1}
+                          {itemNumber}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
@@ -644,6 +671,89 @@ export default function AdminTPSListPage() {
                 </div>
               )
             })}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {!isLoading && tpsLocations.length > 0 && totalPages > 1 && (
+          <div className="mt-6 flex items-center justify-center space-x-2">
+            <button
+              onClick={() => {
+                if (currentPage > 1) {
+                  fetchTPSList(currentPage - 1)
+                }
+              }}
+              disabled={currentPage === 1}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            >
+              Previous
+            </button>
+
+            {/* Page Numbers */}
+            <div className="flex space-x-1">
+              {/* First page */}
+              {currentPage > 3 && (
+                <>
+                  <button
+                    onClick={() => fetchTPSList(1)}
+                    className="w-10 h-10 flex items-center justify-center border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                  >
+                    1
+                  </button>
+                  {currentPage > 4 && (
+                    <span className="w-10 h-10 flex items-center justify-center text-gray-500">...</span>
+                  )}
+                </>
+              )}
+
+              {/* Current page and neighbors */}
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(page => {
+                  if (totalPages <= 7) return true
+                  if (page === 1 || page === totalPages) return false
+                  return Math.abs(page - currentPage) <= 1
+                })
+                .map(page => (
+                  <button
+                    key={page}
+                    onClick={() => fetchTPSList(page)}
+                    className={`w-10 h-10 flex items-center justify-center rounded-lg transition ${
+                      currentPage === page
+                        ? 'bg-blue-600 text-white font-semibold'
+                        : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+
+              {/* Last page */}
+              {currentPage < totalPages - 2 && (
+                <>
+                  {currentPage < totalPages - 3 && (
+                    <span className="w-10 h-10 flex items-center justify-center text-gray-500">...</span>
+                  )}
+                  <button
+                    onClick={() => fetchTPSList(totalPages)}
+                    className="w-10 h-10 flex items-center justify-center border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                  >
+                    {totalPages}
+                  </button>
+                </>
+              )}
+            </div>
+
+            <button
+              onClick={() => {
+                if (currentPage < totalPages) {
+                  fetchTPSList(currentPage + 1)
+                }
+              }}
+              disabled={currentPage === totalPages}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            >
+              Next
+            </button>
           </div>
         )}
       </div>

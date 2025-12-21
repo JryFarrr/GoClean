@@ -161,17 +161,50 @@ export async function PATCH(
       let notificationType = ''
       
       const tpsName = updatedPickup.tps?.tpsProfile?.tpsName || updatedPickup.tps?.name || 'TPS'
+      
+      // Check if this is a rollback (status moved backwards)
+      const statusOrder: Record<string, number> = {
+        'PENDING': 1,
+        'ACCEPTED': 2,
+        'ON_THE_WAY': 3,
+        'PICKED_UP': 4,
+        'COMPLETED': 5
+      }
+      
+      const isRollback = statusOrder[status] < statusOrder[pickupRequest.status]
 
       switch (status) {
+        case 'PENDING':
+          if (isRollback) {
+            // Rollback to PENDING
+            notificationTitle = '🔄 Status Permintaan Diperbarui'
+            notificationMessage = `Hai ${updatedPickup.user.name}, status permintaan penjemputan sampah Anda telah dikembalikan menjadi "Menunggu Konfirmasi". Mohon menunggu konfirmasi ulang dari ${tpsName}.`
+            notificationType = 'pickup_rollback'
+          }
+          break
         case 'ACCEPTED':
-          notificationTitle = '✅ Permintaan Diterima TPS'
-          notificationMessage = `Selamat ${updatedPickup.user.name}, permintaan penjemputan sampah Anda telah diterima oleh ${tpsName}. Petugas akan segera menjemput sampah Anda.`
-          notificationType = 'pickup_accepted'
+          if (isRollback) {
+            // Rollback to ACCEPTED
+            notificationTitle = '🔄 Status Permintaan Diperbarui'
+            notificationMessage = `Hai ${updatedPickup.user.name}, status permintaan penjemputan sampah Anda telah dikembalikan menjadi "Diterima". Mohon menunggu petugas ${tpsName} untuk berangkat ke lokasi Anda.`
+            notificationType = 'pickup_rollback'
+          } else {
+            notificationTitle = '✅ Permintaan Diterima TPS'
+            notificationMessage = `Selamat ${updatedPickup.user.name}, permintaan penjemputan sampah Anda telah diterima oleh ${tpsName}. Petugas akan segera menjemput sampah Anda.`
+            notificationType = 'pickup_accepted'
+          }
           break
         case 'ON_THE_WAY':
-          notificationTitle = '🚛 Petugas Dalam Perjalanan'
-          notificationMessage = `Hai ${updatedPickup.user.name}, petugas ${tpsName} sedang dalam perjalanan menuju lokasi Anda di ${updatedPickup.address}. Harap siapkan sampah Anda.`
-          notificationType = 'pickup_on_the_way'
+          if (isRollback) {
+            // Rollback to ON_THE_WAY
+            notificationTitle = '🔄 Status Permintaan Diperbarui'
+            notificationMessage = `Hai ${updatedPickup.user.name}, status permintaan penjemputan sampah Anda telah dikembalikan menjadi "Dalam Perjalanan". Petugas ${tpsName} masih dalam perjalanan menuju lokasi Anda.`
+            notificationType = 'pickup_rollback'
+          } else {
+            notificationTitle = '🚛 Petugas Dalam Perjalanan'
+            notificationMessage = `Hai ${updatedPickup.user.name}, petugas ${tpsName} sedang dalam perjalanan menuju lokasi Anda di ${updatedPickup.address}. Harap siapkan sampah Anda.`
+            notificationType = 'pickup_on_the_way'
+          }
           break
         case 'PICKED_UP':
           notificationTitle = '✓ Sampah Berhasil Dijemput'
