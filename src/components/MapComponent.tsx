@@ -5,6 +5,14 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
 interface MapComponentProps {
+    // Choropleth props
+    choroplethGeoJson?: any // FeatureCollection
+    choroplethColors?: Record<string, string> // key: nama kecamatan, value: color
+    choroplethTransaksi?: Record<string, number> // key: nama kecamatan, value: transaksi
+  /**
+   * Optional route GeoJSON: Feature<LineString> to draw a real route (e.g. from user to TPS)
+   */
+  routeGeoJson?: any
   center?: [number, number]
   zoom?: number
   markers?: Array<{
@@ -38,28 +46,38 @@ interface MapComponentProps {
   highlightedMarkerId?: string // ID marker yang akan di-highlight
 }
 
-export default function MapComponent({
-  center = [-7.257472, 112.752090], // Surabaya default
-  zoom = 13,
-  markers = [],
-  onLocationSelect,
-  onMarkerRemove,
-  onTPSSelect,
-  selectable = false,
-  draggable = false,
-  showRemoveButton = false,
-  showTPSMarkers = false,
-  currentLat = 0,
-  currentLng = 0,
-  className = 'h-[400px] w-full',
-  selectedTPSId: externalSelectedTPSId = '', // TPS yang dipilih dari luar
-  highlightedMarkerId = '' // Marker yang akan di-highlight dengan animasi
-}: MapComponentProps) {
+export default function MapComponent(props: MapComponentProps) {
+  const {
+    center = [-7.257472, 112.752090], // Surabaya default
+    zoom = 13,
+    markers = [],
+    onLocationSelect,
+    onMarkerRemove,
+    onTPSSelect,
+    selectable = false,
+    draggable = false,
+    showRemoveButton = false,
+    showTPSMarkers = false,
+    currentLat = 0,
+    currentLng = 0,
+    className = 'h-[400px] w-full',
+    selectedTPSId: externalSelectedTPSId = '', // TPS yang dipilih dari luar
+    highlightedMarkerId = '', // Marker yang akan di-highlight dengan animasi
+    routeGeoJson = undefined,
+    choroplethGeoJson = undefined,
+    choroplethColors = undefined,
+    choroplethTransaksi = undefined
+  } = props;
+
+  // GeoJSON ref for route
+  const routeLayerRef = useRef<L.GeoJSON | null>(null)
+  // Choropleth layer ref
+  const choroplethLayerRef = useRef<L.GeoJSON | null>(null)
+
   const mapRef = useRef<L.Map | null>(null)
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const [selectedMarker, setSelectedMarker] = useState<L.Marker | null>(null)
   const markersLayerRef = useRef<L.Marker[]>([])
-  
   // Search states
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
@@ -74,6 +92,24 @@ export default function MapComponent({
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const radiusCircleRef = useRef<L.Circle | null>(null)
   const highlightMarkerRef = useRef<L.Marker | null>(null)
+
+  useEffect(() => {
+    if (!mapRef.current) return
+
+    // Remove previous route layer
+    if (routeLayerRef.current) {
+      mapRef.current.removeLayer(routeLayerRef.current)
+      routeLayerRef.current = null
+    }
+
+    if (routeGeoJson && routeGeoJson.geometry && routeGeoJson.geometry.type === 'LineString') {
+      routeLayerRef.current = L.geoJSON(routeGeoJson, {
+        style: { color: '#2563eb', weight: 5, opacity: 0.8 }
+      }).addTo(mapRef.current)
+      // Optionally fit bounds to route
+      // mapRef.current.fitBounds(routeLayerRef.current.getBounds(), { padding: [50, 50], maxZoom: 15 })
+    }
+  }, [routeGeoJson])
 
   // Custom icons
   const createIcon = (type: string, status?: string, isHighlighted?: boolean) => {

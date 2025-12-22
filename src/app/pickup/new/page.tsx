@@ -1,16 +1,37 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import dynamic from 'next/dynamic'
-import toast from 'react-hot-toast'
-import { Loader2, MapPin, Calendar, FileText, ArrowLeft, Search, ChevronRight, X } from 'lucide-react'
-import Link from 'next/link'
-import MediaUploader from '@/components/MediaUploader'
-import WasteItemSelector from '@/components/WasteItemSelector'
-import { useLocationStore } from '@/lib/store'
-import { SURABAYA_KECAMATAN } from '@/lib/surabayaKecamatan'
+import { useState, useEffect } from 'react';
+import { FeatureCollection } from 'geojson';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
+import toast from 'react-hot-toast';
+import { Loader2, MapPin, Calendar, FileText, ArrowLeft, Search, ChevronRight, X } from 'lucide-react';
+import Link from 'next/link';
+import MediaUploader from '@/components/MediaUploader';
+import WasteItemSelector from '@/components/WasteItemSelector';
+import { useLocationStore } from '@/lib/store';
+import { SURABAYA_KECAMATAN } from '@/lib/surabayaKecamatan';
+
+
+interface TPSLocation {
+  id: string;
+  name: string;
+  kecamatan: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  operatingHours?: string;
+  phone?: string;
+  isActive: boolean;
+  distance?: number;
+}
+// ...interface TPSLocation and other interfaces...
+    for (const k in transaksiPerKecamatan) {
+      colors[k] = getColor(transaksiPerKecamatan[k])
+    }
+    setChoroplethColors(colors)
+  }, [kecamatanGeoJson, transaksiPerKecamatan])
 
 interface TPSLocation {
   id: string
@@ -22,6 +43,7 @@ interface TPSLocation {
   operatingHours?: string
   phone?: string
   isActive: boolean
+  distance?: number // optional, for nearest TPS calculation
 }
 
 // Dynamic import for map component to avoid SSR issues
@@ -39,18 +61,28 @@ interface WasteItem {
   estimatedWeight: number
 }
 
+
 export default function NewPickupPage() {
+  // GeoJSON route state (for antar)
+  const [routeGeoJson, setRouteGeoJson] = useState<any>(undefined)
+  // Simpan lokasi awal user (saat pertama kali pilih lokasi)
+  const [userInitialLocation, setUserInitialLocation] = useState<[number, number] | null>(null)
+  // Trigger agar fitBounds selalu update saat routeGeoJson berubah
+  const [fitRouteBoundsKey, setFitRouteBoundsKey] = useState(0)
   const { data: session, status } = useSession()
   const router = useRouter()
   const { latitude, longitude, address, setLocation } = useLocationStore()
-  
-  const [step, setStep] = useState(1)
+
+  // Step 0: antar/jemput selection
+  const [step, setStep] = useState(0)
+  const [orderType, setOrderType] = useState<'antar' | 'jemput' | null>(null)
+
   const [files, setFiles] = useState<File[]>([])
   const [wasteItems, setWasteItems] = useState<WasteItem[]>([])
   const [description, setDescription] = useState('')
   const [scheduledAt, setScheduledAt] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  
+
   // TPS selection states
   const [selectedKecamatan, setSelectedKecamatan] = useState<string>('')
   const [searchKecamatan, setSearchKecamatan] = useState('')
@@ -58,10 +90,12 @@ export default function NewPickupPage() {
   const [selectedTPS, setSelectedTPS] = useState<TPSLocation | null>(null)
   const [tpsLocations, setTpsLocations] = useState<TPSLocation[]>([])
   const [isLoadingTPS, setIsLoadingTPS] = useState(true)
-  
+  // Simpan 5 TPS terdekat pertama kali lokasi user dipilih
+  const [fixedNearestTPS, setFixedNearestTPS] = useState<TPSLocation[] | null>(null)
+
   // Address search state
   const [isSearchingAddress, setIsSearchingAddress] = useState(false)
-  
+
   // Detailed address form states
   const [detailAddress, setDetailAddress] = useState({
     street: '',
@@ -121,6 +155,44 @@ export default function NewPickupPage() {
   const handleLocationSelect = (lat: number, lng: number, addr: string) => {
     setLocation(lat, lng, addr)
     setSelectedTPS(null) // Clear TPS selection when custom location is selected
+    // Simpan lokasi awal user hanya jika belum pernah diset
+    if (!userInitialLocation) {
+      setUserInitialLocation([lat, lng])
+      // Hitung dan simpan 5 TPS terdekat saat lokasi user pertama kali dipilih
+      if (tpsLocations.length > 0) {
+        const nearest = tpsLocations
+          .map(tps => ({
+            ...tps,
+            distance: calculateDistance(lat, lng, tps.latitude, tps.longitude)
+          }))
+          .sort((a, b) => a.distance - b.distance)
+          .slice(0, 5)
+        setFixedNearestTPS(nearest)
+      }
+    }
+  }
+
+  // Fetch route from OpenRouteService Directions API (GeoJSON)
+  const fetchRoute = async (from: [number, number], to: [number, number]) => {
+    try {
+      // Ganti dengan API key OpenRouteService kamu
+      const ORS_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjhiNTY2ZmE1Nzc3YzRiMTI5YmQwMWRmZTVmYjMyNDI1IiwiaCI6Im11cm11cjY0In0=';
+      const url = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${ORS_API_KEY}&start=${from[1]},${from[0]}&end=${to[1]},${to[0]}`
+      const res = await fetch(url)
+      if (!res.ok) throw new Error('Gagal mengambil rute jalan')
+      const data = await res.json()
+      // Ambil geometry LineString GeoJSON
+      const geometry = data.features[0].geometry
+      setRouteGeoJson({
+        type: 'Feature',
+        geometry,
+        properties: {}
+      })
+      setFitRouteBoundsKey(prev => prev + 1) // trigger fitBounds setiap rute baru
+    } catch (err) {
+      toast.error('Gagal mengambil rute jalan')
+      setRouteGeoJson(undefined)
+    }
   }
 
   const handleTPSSelect = (tpsId: string, lat: number, lng: number, addr: string) => {
@@ -129,6 +201,12 @@ export default function NewPickupPage() {
       setSelectedTPS(tps)
       setLocation(lat, lng, addr)
       toast.success(`TPS ${tps.name} dipilih`)
+      // Always use userInitialLocation for route, not current lat/lng
+      if (orderType === 'antar' && userInitialLocation) {
+        fetchRoute(userInitialLocation, [tps.latitude, tps.longitude])
+      } else {
+        setRouteGeoJson(undefined)
+      }
     }
   }
 
@@ -206,8 +284,8 @@ export default function NewPickupPage() {
   }
 
   // Filter kecamatan dari SURABAYA_KECAMATAN yang memiliki TPS
-  const kecamatanWithTPS = Array.from(new Set(tpsLocations.map(tps => tps.kecamatan)))
-  const filteredKecamatan = SURABAYA_KECAMATAN.filter(k => 
+  const kecamatanWithTPS = Array.from(new Set(tpsLocations.map((tps: TPSLocation) => tps.kecamatan)))
+  const filteredKecamatan = SURABAYA_KECAMATAN.filter((k: string) => 
     k.toLowerCase().includes(searchKecamatan.toLowerCase()) &&
     kecamatanWithTPS.includes(k)
   )
@@ -338,7 +416,8 @@ export default function NewPickupPage() {
       {/* Progress Steps */}
       <div className="flex items-center justify-between mb-8">
         {[
-          { num: 1, label: 'Pilih TPS' },
+          { num: 0, label: 'Antar/Jemput' },
+          { num: 1, label: 'Pilih TPS/Lokasi' },
           { num: 2, label: 'Foto/Video' },
           { num: 3, label: 'Jenis Sampah' },
           { num: 4, label: 'Konfirmasi' }
@@ -351,12 +430,12 @@ export default function NewPickupPage() {
                   : 'bg-green-100 text-green-600'
               }`}
             >
-              {s.num}
+              {s.num + 1}
             </div>
             <span className={`ml-2 hidden sm:block ${step >= s.num ? 'text-green-600 font-medium' : 'text-green-600'}`}>
               {s.label}
             </span>
-            {i < 3 && (
+            {i < 4 && (
               <div className={`w-12 md:w-24 h-1 mx-2 ${step > s.num ? 'bg-green-600' : 'bg-green-100'}`} />
             )}
           </div>
@@ -365,6 +444,31 @@ export default function NewPickupPage() {
 
       {/* Step Content */}
       <div className="bg-white rounded-xl shadow-lg p-6 md:p-8">
+        {/* Step 0: Antar/Jemput Selection */}
+        {step === 0 && (
+          <div className="flex flex-col items-center justify-center min-h-[300px] gap-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Pilih Jenis Layanan</h2>
+            <div className="flex flex-col md:flex-row gap-6 w-full max-w-xl">
+              <button
+                onClick={() => { setOrderType('antar'); setStep(1); }}
+                className={`flex-1 px-8 py-6 rounded-2xl border-2 transition font-semibold text-lg shadow-sm flex flex-col items-center gap-2
+                  ${orderType === 'antar' ? 'bg-green-600 text-white border-green-700 scale-105' : 'bg-white text-green-700 border-green-300 hover:border-green-500 hover:bg-green-50'}`}
+              >
+                🚗 Antar ke TPS
+                <span className="text-sm font-normal mt-2">Saya akan mengantarkan sampah ke TPS</span>
+              </button>
+              <button
+                onClick={() => { setOrderType('jemput'); setStep(1); }}
+                className={`flex-1 px-8 py-6 rounded-2xl border-2 transition font-semibold text-lg shadow-sm flex flex-col items-center gap-2
+                  ${orderType === 'jemput' ? 'bg-blue-600 text-white border-blue-700 scale-105' : 'bg-white text-blue-700 border-blue-300 hover:border-blue-500 hover:bg-blue-50'}`}
+              >
+                🏠 Jemput ke Rumah
+                <span className="text-sm font-normal mt-2">Petugas akan menjemput sampah ke lokasi saya</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Step 1: Location */}
         {step === 1 && (
           <div className="space-y-6">
@@ -372,10 +476,14 @@ export default function NewPickupPage() {
               <div className="bg-green-500 p-3 rounded-lg">
                 <MapPin className="text-white" size={24} />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900">Pilih TPS Terdekat atau Tentukan Lokasi Anda</h2>
+              <h2 className="text-2xl font-bold text-gray-900">
+                {orderType === 'antar' ? 'Pilih Lokasi Anda & TPS Tujuan' : 'Tentukan Lokasi Penjemputan'}
+              </h2>
             </div>
             <p className="text-gray-600 mb-6">
-              Anda bisa memilih TPS terdekat dari daftar, atau langsung menentukan lokasi Anda sendiri di peta.
+              {orderType === 'antar'
+                ? 'Tentukan lokasi Anda saat ini, lalu pilih TPS tujuan dari 5 TPS terdekat.'
+                : 'Tentukan lokasi penjemputan sampah Anda, atau pilih lokasi di peta.'}
             </p>
 
             {/* Detail Address Form */}
@@ -503,19 +611,42 @@ export default function NewPickupPage() {
             <div className="grid md:grid-cols-3 gap-4">
               {/* Map Section - 2/3 width */}
               <div className="md:col-span-2">
-                <MapComponent
-                  selectable
-                  onLocationSelect={handleLocationSelect}
-                  onTPSSelect={handleTPSSelect}
-                  onMarkerRemove={handleRemoveLocation}
-                  markers={tpsMarkers}
-                  showTPSMarkers
-                  showRemoveButton={!!latitude && !!longitude}
-                  currentLat={latitude}
-                  currentLng={longitude}
-                  selectedTPSId={selectedTPS?.id || ''}
-                  className="h-[500px] w-full"
-                />
+                <div className="relative">
+                  <MapComponent
+                    selectable
+                    onLocationSelect={handleLocationSelect}
+                    onTPSSelect={handleTPSSelect}
+                    onMarkerRemove={handleRemoveLocation}
+                    markers={tpsMarkers}
+                    showTPSMarkers
+                    showRemoveButton={!!latitude && !!longitude}
+                    currentLat={latitude}
+                    currentLng={longitude}
+                    selectedTPSId={selectedTPS?.id || ''}
+                    className="h-[500px] w-full"
+                    routeGeoJson={orderType === 'antar' && routeGeoJson ? routeGeoJson : undefined}
+                    // fitRouteBounds prop removed because it does not exist in MapComponentProps
+                    // Choropleth props
+                    choroplethGeoJson={orderType === 'jemput' ? kecamatanGeoJson : undefined}
+                    choroplethColors={orderType === 'jemput' ? choroplethColors : undefined}
+                    choroplethTransaksi={orderType === 'jemput' ? transaksiPerKecamatan : undefined}
+                  />
+                  {/* Choropleth Legend */}
+                  {orderType === 'jemput' && kecamatanGeoJson && Object.keys(transaksiPerKecamatan).length > 0 && (
+                    <div className="absolute top-4 right-4 bg-white/90 rounded-lg shadow-lg border border-green-200 p-4 z-50 w-56">
+                      <div className="font-bold text-green-800 mb-2 text-sm">Legenda Warna Transaksi TPS</div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs text-gray-600">Sedikit</span>
+                        <div className="flex-1 h-4 rounded bg-gradient-to-r from-[#bbf7d0] to-[#166534]" />
+                        <span className="text-xs text-gray-600">Banyak</span>
+                      </div>
+                      <div className="flex justify-between text-xs text-green-700">
+                        <span>Min: {Math.min(...Object.values(transaksiPerKecamatan))}</span>
+                        <span>Max: {Math.max(...Object.values(transaksiPerKecamatan))}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 {address && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4 relative">
@@ -550,111 +681,142 @@ export default function NewPickupPage() {
               {/* Sidebar - 1/3 width */}
               <div className="md:col-span-1">
                 <div className="bg-white rounded-lg border border-gray-300 p-4 h-[500px] overflow-y-auto">
-                  <div className="flex items-center space-x-2 mb-4">
-                    <div className="bg-green-500 p-2 rounded-lg">
-                      <MapPin size={16} className="text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-gray-800 text-lg">
-                        Daftar Kecamatan
-                      </h3>
-                      <p className="text-xs text-gray-500">
-                        Jangkauan Sambangan Sampah
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Loading State */}
-                  {isLoadingTPS ? (
-                    <div className="flex items-center justify-center h-64">
-                      <Loader2 className="animate-spin text-green-600" size={32} />
-                    </div>
-                  ) : (
+                  {/* Show 5 nearest TPS for 'antar' */}
+                  {orderType === 'antar' && latitude && longitude && tpsLocations.length > 0 ? (
                     <>
-                      {/* Search Box */}
-                      <div className="relative mb-3">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                        <input
-                          type="text"
-                          placeholder="Cari kecamatan..."
-                          value={searchKecamatan}
-                          onChange={(e) => setSearchKecamatan(e.target.value)}
-                          className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-                        />
+                      <h3 className="font-bold text-gray-800 text-lg mb-2">5 TPS Terdekat</h3>
+                      <div className="space-y-2">
+                        {(fixedNearestTPS || [])
+                          .map((tps, idx) => {
+                            const isTPSSelected = selectedTPS?.id === tps.id
+                            return (
+                              <button
+                                key={tps.id}
+                                onClick={() => handleTPSSelect(tps.id, tps.latitude, tps.longitude, tps.address)}
+                                className={`w-full text-left px-3 py-2 rounded-lg transition text-sm border flex flex-col gap-1 ${
+                                  isTPSSelected
+                                    ? 'bg-green-100 border-green-500'
+                                    : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
+                                }`}
+                              >
+                                <div className="flex justify-between items-center">
+                                  <span className="font-medium text-green-800">{tps.name}</span>
+                                  <span className="text-xs text-green-600">{typeof tps.distance === 'number' ? tps.distance.toFixed(2) : '-'} km</span>
+                                </div>
+                                <span className="text-xs text-gray-600">{tps.address}</span>
+                                {tps.operatingHours && (
+                                  <span className="text-xs text-green-600">⏰ {tps.operatingHours}</span>
+                                )}
+                              </button>
+                            )
+                          })}
                       </div>
-
-                  {/* Kecamatan List */}
-                  <div className="space-y-2">
-                    {filteredKecamatan.map((kec) => {
-                      const tpsCount = getTpsByKecamatan(kec).length
-                      const isSelected = selectedKecamatan === kec
-                      const tpsList = getTpsByKecamatan(kec)
-                      
-                      return (
-                        <div key={kec}>
-                          <button
-                            onClick={() => handleKecamatanSelect(kec)}
-                            className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between transition ${
-                              isSelected
-                                ? 'bg-green-500 text-white'
-                                : 'hover:bg-gray-100 text-gray-700'
-                            }`}
-                          >
-                            <div className="flex-1">
-                              <p className={`font-medium text-sm ${isSelected ? 'text-white' : 'text-gray-900'}`}>
-                                {kec}
-                              </p>
-                              <p className={`text-xs ${isSelected ? 'text-green-100' : 'text-gray-500'}`}>
-                                {tpsCount} TPS tersedia
-                              </p>
-                            </div>
-                            <ChevronRight 
-                              size={16} 
-                              className={`transition-transform ${isSelected ? 'text-white rotate-90' : 'text-gray-400'}`} 
+                    </>
+                  ) : (
+                    // ...existing code for jemput or no location
+                    <>
+                      <div className="flex items-center space-x-2 mb-4">
+                        <div className="bg-green-500 p-2 rounded-lg">
+                          <MapPin size={16} className="text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-gray-800 text-lg">
+                            Daftar Kecamatan
+                          </h3>
+                          <p className="text-xs text-gray-500">
+                            Jangkauan Sambangan Sampah
+                          </p>
+                        </div>
+                      </div>
+                      {/* Loading State */}
+                      {isLoadingTPS ? (
+                        <div className="flex items-center justify-center h-64">
+                          <Loader2 className="animate-spin text-green-600" size={32} />
+                        </div>
+                      ) : (
+                        <>
+                          {/* Search Box */}
+                          <div className="relative mb-3">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                            <input
+                              type="text"
+                              placeholder="Cari kecamatan..."
+                              value={searchKecamatan}
+                              onChange={(e) => setSearchKecamatan(e.target.value)}
+                              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
                             />
-                          </button>
-                          
-                          {/* TPS List - shown when kecamatan selected */}
-                          {isSelected && (
-                            <div className="ml-4 mt-2 space-y-1">
-                              {tpsList.map((tps) => {
-                                const isTPSSelected = selectedTPS?.id === tps.id
-                                return (
+                          </div>
+                          {/* Kecamatan List */}
+                          <div className="space-y-2">
+                            {filteredKecamatan.map((kec) => {
+                              const tpsCount = getTpsByKecamatan(kec).length
+                              const isSelected = selectedKecamatan === kec
+                              const tpsList = getTpsByKecamatan(kec)
+                              return (
+                                <div key={kec}>
                                   <button
-                                    key={tps.id}
-                                    onClick={() => handleTPSSelect(tps.id, tps.latitude, tps.longitude, tps.address)}
-                                    className={`w-full text-left px-3 py-2 rounded-lg transition text-sm ${
-                                      isTPSSelected
-                                        ? 'bg-green-100 border-2 border-green-500'
-                                        : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
+                                    onClick={() => handleKecamatanSelect(kec)}
+                                    className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between transition ${
+                                      isSelected
+                                        ? 'bg-green-500 text-white'
+                                        : 'hover:bg-gray-100 text-gray-700'
                                     }`}
                                   >
-                                    <p className={`font-medium ${isTPSSelected ? 'text-green-800' : 'text-gray-800'}`}>
-                                      {tps.name}
-                                    </p>
-                                    <p className="text-xs text-gray-600 mt-0.5">
-                                      {tps.address}
-                                    </p>
-                                    {tps.operatingHours && (
-                                      <p className="text-xs text-green-600 mt-0.5">
-                                        ⏰ {tps.operatingHours}
+                                    <div className="flex-1">
+                                      <p className={`font-medium text-sm ${isSelected ? 'text-white' : 'text-gray-900'}`}>
+                                        {kec}
                                       </p>
-                                    )}
+                                      <p className={`text-xs ${isSelected ? 'text-green-100' : 'text-gray-500'}`}>
+                                        {tpsCount} TPS tersedia
+                                      </p>
+                                    </div>
+                                    <ChevronRight 
+                                      size={16} 
+                                      className={`transition-transform ${isSelected ? 'text-white rotate-90' : 'text-gray-400'}`} 
+                                    />
                                   </button>
-                                )
-                              })}
-                            </div>
+                                  {/* TPS List - shown when kecamatan selected */}
+                                  {isSelected && (
+                                    <div className="ml-4 mt-2 space-y-1">
+                                      {tpsList.map((tps) => {
+                                        const isTPSSelected = selectedTPS?.id === tps.id
+                                        return (
+                                          <button
+                                            key={tps.id}
+                                            onClick={() => handleTPSSelect(tps.id, tps.latitude, tps.longitude, tps.address)}
+                                            className={`w-full text-left px-3 py-2 rounded-lg transition text-sm ${
+                                              isTPSSelected
+                                                ? 'bg-green-100 border-2 border-green-500'
+                                                : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
+                                            }`}
+                                          >
+                                            <p className={`font-medium ${isTPSSelected ? 'text-green-800' : 'text-gray-800'}`}>
+                                              {tps.name}
+                                            </p>
+                                            <p className="text-xs text-gray-600 mt-0.5">
+                                              {tps.address}
+                                            </p>
+                                            {tps.operatingHours && (
+                                              <p className="text-xs text-green-600 mt-0.5">
+                                                ⏰ {tps.operatingHours}
+                                              </p>
+                                            )}
+                                          </button>
+                                        )
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                          {filteredKecamatan.length === 0 && !isLoadingTPS && (
+                            <p className="text-sm text-gray-500 text-center py-4">
+                              {searchKecamatan ? 'Kecamatan tidak ditemukan' : 'Belum ada TPS terdaftar'}
+                            </p>
                           )}
-                        </div>
-                      )
-                    })}
-                  </div>
-
-                  {filteredKecamatan.length === 0 && !isLoadingTPS && (
-                    <p className="text-sm text-gray-500 text-center py-4">
-                      {searchKecamatan ? 'Kecamatan tidak ditemukan' : 'Belum ada TPS terdaftar'}
-                    </p>
-                  )}
+                        </>
+                      )}
                     </>
                   )}
                 </div>
@@ -780,7 +942,9 @@ export default function NewPickupPage() {
               <div className="bg-green-50 rounded-lg p-4">
                 <h3 className="font-semibold flex items-center text-green-800">
                   <MapPin size={18} className="mr-2 text-green-600" />
-                  {selectedTPS ? 'TPS Tujuan' : '📍 Lokasi Penjemputan User'}
+                  {orderType === 'antar'
+                    ? 'TPS Tujuan'
+                    : '📍 Lokasi Penjemputan User'}
                 </h3>
                 <p className="text-green-700 mt-1">{address}</p>
               </div>
@@ -794,7 +958,7 @@ export default function NewPickupPage() {
                   </h3>
                   {(() => {
                     const nearestTPS = getNearestTPS()
-                    const distance = calculateDistance(latitude, longitude, nearestTPS!.latitude, nearestTPS!.longitude)
+                    const distance = calculateDistance(latitude ?? 0, longitude ?? 0, nearestTPS!.latitude, nearestTPS!.longitude)
                     return (
                       <div className="space-y-2">
                         <div>
@@ -909,5 +1073,6 @@ export default function NewPickupPage() {
         )}
       </div>
     </div>
+
   )
 }
