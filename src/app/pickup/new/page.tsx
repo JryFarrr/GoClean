@@ -26,27 +26,13 @@ interface TPSLocation {
   isActive: boolean;
   distance?: number;
 }
-// ...interface TPSLocation and other interfaces...
-    for (const k in transaksiPerKecamatan) {
-      colors[k] = getColor(transaksiPerKecamatan[k])
-    }
-    setChoroplethColors(colors)
-  }, [kecamatanGeoJson, transaksiPerKecamatan])
 
-interface TPSLocation {
-  id: string
-  name: string
-  kecamatan: string
-  address: string
-  latitude: number
-  longitude: number
-  operatingHours?: string
-  phone?: string
-  isActive: boolean
-  distance?: number // optional, for nearest TPS calculation
+interface WasteItem {
+  wasteType: string
+  estimatedWeight: number
 }
 
-// Dynamic import for map component to avoid SSR issues
+
 const MapComponent = dynamic(() => import('@/components/MapComponent'), {
   ssr: false,
   loading: () => (
@@ -56,13 +42,28 @@ const MapComponent = dynamic(() => import('@/components/MapComponent'), {
   )
 })
 
-interface WasteItem {
-  wasteType: string
-  estimatedWeight: number
-}
-
-
 export default function NewPickupPage() {
+  // Choropleth feature states
+  const [kecamatanGeoJson, setKecamatanGeoJson] = useState<FeatureCollection | null>(null);
+  const [transaksiPerKecamatan, setTransaksiPerKecamatan] = useState<Record<string, number>>({});
+  const [choroplethColors, setChoroplethColors] = useState<Record<string, string>>({});
+
+  // Helper function to get color based on value
+  function getColor(value: number): string {
+    // Example: green for low, yellow for medium, red for high
+    if (value < 10) return '#bbf7d0'; // light green
+    if (value < 50) return '#fde68a'; // yellow
+    return '#ef4444'; // red
+  }
+
+  useEffect(() => {
+    const colors: Record<string, string> = {};
+    for (const k in transaksiPerKecamatan) {
+      colors[k] = getColor(transaksiPerKecamatan[k]);
+    }
+    setChoroplethColors(colors);
+  }, [kecamatanGeoJson, transaksiPerKecamatan]);
+  
   // GeoJSON route state (for antar)
   const [routeGeoJson, setRouteGeoJson] = useState<any>(undefined)
   // Simpan lokasi awal user (saat pertama kali pilih lokasi)
@@ -176,7 +177,7 @@ export default function NewPickupPage() {
   const fetchRoute = async (from: [number, number], to: [number, number]) => {
     try {
       // Ganti dengan API key OpenRouteService kamu
-      const ORS_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjhiNTY2ZmE1Nzc3YzRiMTI5YmQwMWRmZTVmYjMyNDI1IiwiaCI6Im11cm11cjY0In0=';
+      const ORS_API_KEY = process.env.NEXT_PUBLIC_ORS_API_KEY;
       const url = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${ORS_API_KEY}&start=${from[1]},${from[0]}&end=${to[1]},${to[0]}`
       const res = await fetch(url)
       if (!res.ok) throw new Error('Gagal mengambil rute jalan')
@@ -393,7 +394,7 @@ export default function NewPickupPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 bg-gradient-to-br from-gray-50 via-green-50/30 to-blue-50/20 min-h-screen">
+    <div className="max-w-7xl mx-auto px-4 py-8 bg-linear-to-br from-gray-50 via-green-50/30 to-blue-50/20 min-h-screen">
       {/* Modern Header */}
       <div className="mb-8">
         <Link
@@ -404,7 +405,7 @@ export default function NewPickupPage() {
           Kembali ke Dashboard
         </Link>
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-gray-100">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold bg-linear-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
             Antar/Jemput Sampah
           </h1>
           <p className="text-gray-600 mt-3 text-lg">
@@ -487,7 +488,7 @@ export default function NewPickupPage() {
             </p>
 
             {/* Detail Address Form */}
-            <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-5 border border-purple-200 mb-6">
+            <div className="bg-linear-to-r from-purple-50 to-purple-100 rounded-lg p-5 border border-purple-200 mb-6">
               <label className="block text-sm font-semibold text-purple-900 mb-4">
                 📝 Form Pengisian Detail Alamat (Patokan)
               </label>
@@ -625,7 +626,8 @@ export default function NewPickupPage() {
                     selectedTPSId={selectedTPS?.id || ''}
                     className="h-[500px] w-full"
                     routeGeoJson={orderType === 'antar' && routeGeoJson ? routeGeoJson : undefined}
-                    // fitRouteBounds prop removed because it does not exist in MapComponentProps
+                    fitRouteBoundsKey={fitRouteBoundsKey}
+                    
                     // Choropleth props
                     choroplethGeoJson={orderType === 'jemput' ? kecamatanGeoJson : undefined}
                     choroplethColors={orderType === 'jemput' ? choroplethColors : undefined}
@@ -637,7 +639,7 @@ export default function NewPickupPage() {
                       <div className="font-bold text-green-800 mb-2 text-sm">Legenda Warna Transaksi TPS</div>
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-xs text-gray-600">Sedikit</span>
-                        <div className="flex-1 h-4 rounded bg-gradient-to-r from-[#bbf7d0] to-[#166534]" />
+                        <div className="flex-1 h-4 rounded bg-linear-to-r from-[#bbf7d0] to-[#166534]" />
                         <span className="text-xs text-gray-600">Banyak</span>
                       </div>
                       <div className="flex justify-between text-xs text-green-700">

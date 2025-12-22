@@ -13,6 +13,7 @@ interface MapComponentProps {
    * Optional route GeoJSON: Feature<LineString> to draw a real route (e.g. from user to TPS)
    */
   routeGeoJson?: any
+  fitRouteBoundsKey?: number
   center?: [number, number]
   zoom?: number
   markers?: Array<{
@@ -64,6 +65,7 @@ export default function MapComponent(props: MapComponentProps) {
     selectedTPSId: externalSelectedTPSId = '', // TPS yang dipilih dari luar
     highlightedMarkerId = '', // Marker yang akan di-highlight dengan animasi
     routeGeoJson = undefined,
+    fitRouteBoundsKey = 0,
     choroplethGeoJson = undefined,
     choroplethColors = undefined,
     choroplethTransaksi = undefined
@@ -107,9 +109,15 @@ export default function MapComponent(props: MapComponentProps) {
         style: { color: '#2563eb', weight: 5, opacity: 0.8 }
       }).addTo(mapRef.current)
       // Optionally fit bounds to route
-      // mapRef.current.fitBounds(routeLayerRef.current.getBounds(), { padding: [50, 50], maxZoom: 15 })
+      mapRef.current.fitBounds(routeLayerRef.current.getBounds(), { padding: [50, 50], maxZoom: 15 })
     }
   }, [routeGeoJson])
+
+  useEffect(() => {
+    if (mapRef.current && routeLayerRef.current) {
+      mapRef.current.fitBounds(routeLayerRef.current.getBounds(), { padding: [50, 50], maxZoom: 15 });
+    }
+  }, [fitRouteBoundsKey]);
 
   // Custom icons
   const createIcon = (type: string, status?: string, isHighlighted?: boolean) => {
