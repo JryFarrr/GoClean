@@ -1123,11 +1123,13 @@ export default function MapComponent(props: MapComponentProps) {
                       <div className="max-h-48 overflow-y-auto space-y-1">
                         {filteredMarkers
                           .sort((a, b) => {
+                            if (currentLat === null || currentLng === null) return 0
                             const distA = calculateDistance(currentLat, currentLng, a.lat, a.lng)
                             const distB = calculateDistance(currentLat, currentLng, b.lat, b.lng)
                             return distA - distB
                           })
                           .map((marker, index) => {
+                            if (currentLat === null || currentLng === null) return null
                             const distance = calculateDistance(currentLat, currentLng, marker.lat, marker.lng)
                             return (
                               <button
