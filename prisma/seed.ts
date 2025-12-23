@@ -23,7 +23,7 @@ async function main() {
 
   // Create TPS Users
   const tpsPassword = await hash('tps123', 12)
-  
+
   const tps1 = await prisma.user.upsert({
     where: { email: 'tps1@goclean.id' },
     update: {},
@@ -393,7 +393,9 @@ async function main() {
   console.log('User 2: user2@goclean.id / user123')
   console.log('=====================\n')
 
-  // Create default settings
+  // Create default settings (COMMENTED OUT - optional feature)
+  // Uncomment if Setting model exists in your schema
+  /*
   console.log('Creating default settings...')
   const defaultSettings = [
     { key: 'email_notifications', value: 'true', category: 'notification', description: 'Enable email notifications' },
@@ -416,6 +418,7 @@ async function main() {
     })
   }
   console.log('Created default settings')
+  */
 
   console.log('Seeding completed!')
 }
