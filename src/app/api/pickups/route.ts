@@ -9,7 +9,7 @@ import { existsSync } from 'fs'
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -22,28 +22,28 @@ export async function POST(req: NextRequest) {
     const wasteItems = JSON.parse(formData.get('wasteItems') as string)
     const scheduledAt = formData.get('scheduledAt') as string
     const tpsId = formData.get('tpsId') as string
-    
+
     // Handle file uploads
     const photos: string[] = []
     const videos: string[] = []
-    
+
     const uploadDir = path.join(process.cwd(), 'public', 'uploads')
     if (!existsSync(uploadDir)) {
       await mkdir(uploadDir, { recursive: true })
     }
-    
+
     // Process uploaded files
     const files = formData.getAll('files') as File[]
     for (const file of files) {
       const bytes = await file.arrayBuffer()
       const buffer = Buffer.from(bytes)
-      
+
       const uniqueName = `${Date.now()}-${file.name}`
       const filePath = path.join(uploadDir, uniqueName)
       await writeFile(filePath, buffer)
-      
+
       const fileUrl = `/uploads/${uniqueName}`
-      
+
       if (file.type.startsWith('image/')) {
         photos.push(fileUrl)
       } else if (file.type.startsWith('video/')) {
@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Pickup request error:', error)
     return NextResponse.json(
-      { error: 'Terjadi kesalahan saat membuat permintaan penjemputan' },
+      { error: `Terjadi kesalahan saat membuat permintaan penjemputan: ${error instanceof Error ? error.message : String(error)}` },
       { status: 500 }
     )
   }
@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }

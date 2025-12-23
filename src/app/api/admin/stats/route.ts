@@ -6,7 +6,7 @@ import prisma from '@/lib/prisma'
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session?.user || (session.user.role !== 'ADMIN' && session.user.role !== 'JEMPUT')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -22,8 +22,7 @@ export async function GET() {
       recentPickups,
       recentTransactions,
       wasteStats,
-      wasteByTPS,
-      pickupByKecamatan,
+      wasteByTPS
     ] = await Promise.all([
       prisma.user.count({ where: { role: 'USER' } }),
       prisma.user.count({ where: { role: 'TPS' } }),
@@ -92,18 +91,7 @@ export async function GET() {
             }
           }
         }
-      }),
-      prisma.pickupRequest.groupBy({
-        by: ['kecamatan'],
-        _count: {
-          kecamatan: true,
-        },
-        where: {
-          kecamatan: {
-            not: null,
-          },
-        },
-      }),
+      })
     ])
 
     // Process waste by TPS
@@ -112,7 +100,7 @@ export async function GET() {
       if (pickup.tps) {
         const tpsName = pickup.tps.tpsProfile?.tpsName || pickup.tps.name
         const tpsId = pickup.tpsId!
-        
+
         if (!tpsWasteMap.has(tpsId)) {
           tpsWasteMap.set(tpsId, {
             tpsName,
@@ -122,12 +110,12 @@ export async function GET() {
             wasteTypes: {}
           })
         }
-        
+
         const tpsData = tpsWasteMap.get(tpsId)
         tpsData.pickupCount += 1
         tpsData.totalWeight += pickup.transaction?.totalWeight || 0
         tpsData.totalRevenue += pickup.transaction?.totalPrice || 0
-        
+
         pickup.wasteItems.forEach((item) => {
           if (item.actualWeight) {
             if (!tpsData.wasteTypes[item.wasteType]) {
@@ -161,13 +149,12 @@ export async function GET() {
       })),
       wasteByTPS: wasteByTPSArray,
       recentPickups,
-      recentTransactions,
-      pickupByKecamatan,
+      recentTransactions
     })
   } catch (error) {
     console.error('Admin stats error:', error)
     return NextResponse.json(
-      { error: 'Terjadi kesalahan' },
+      { error: `Terjadi kesalahan: ${error instanceof Error ? error.message : String(error)}` },
       { status: 500 }
     )
   }
