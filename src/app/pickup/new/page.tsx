@@ -765,13 +765,13 @@ export default function NewPickupPage() {
                     choroplethColors={orderType === 'jemput' ? choroplethColors : undefined}
                     choroplethTransaksi={orderType === 'jemput' ? transaksiPerKecamatan : undefined}
 
-                    // TPS Polygon props
-                    tpsPolygons={orderType === 'tps' && showTPSPolygons ? tpsPolygons : []}
-                    showTPSPolygons={orderType === 'tps' && showTPSPolygons}
+                    // TPS Polygon props - disabled (orderType doesn't have 'tps' option)
+                    tpsPolygons={[]}
+                    showTPSPolygons={false}
                   />
 
-                  {/* Toggle for TPS Polygons */}
-                  {orderType === 'tps' && tpsPolygons.length > 0 && (
+                  {/* Toggle for TPS Polygons - disabled since orderType doesn't support 'tps' */}
+                  {false && tpsPolygons.length > 0 && (
                     <div className="absolute top-4 left-4 bg-white/95 rounded-lg shadow-lg border border-orange-200 p-3 z-50">
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
