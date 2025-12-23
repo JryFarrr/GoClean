@@ -38,7 +38,7 @@ interface MapComponentProps {
     photos?: string[]
     wasteItems?: Array<{ wasteType: string; estimatedWeight: number }>
     user?: { name: string; phone?: string }
-    type?: 'user' | 'tps' | 'pickup'
+    type?: 'user' | 'tps' | 'pickup' | 'driver'
     kecamatan?: string
     operatingHours?: string
     phone?: string
