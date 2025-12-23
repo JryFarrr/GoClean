@@ -5,13 +5,6 @@ import prisma from '@/lib/prisma'
 import * as XLSX from 'xlsx'
 import bcrypt from 'bcryptjs'
 
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '10mb',
-    },
-  },
-}
 
 interface UserImportData {
   name: string
@@ -26,14 +19,14 @@ interface UserImportData {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session?.user || session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const formData = await request.formData()
     const file = formData.get('file') as File
-    
+
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 })
     }
@@ -41,12 +34,12 @@ export async function POST(request: NextRequest) {
     // Read file
     const arrayBuffer = await file.arrayBuffer()
     console.log('File received, size:', arrayBuffer.byteLength)
-    
+
     const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' })
     const worksheet = workbook.Sheets[workbook.SheetNames[0]]
-    
+
     console.log('Sheet names:', workbook.SheetNames)
-    
+
     if (!worksheet) {
       return NextResponse.json({ error: 'No data in worksheet' }, { status: 400 })
     }
@@ -66,10 +59,10 @@ export async function POST(request: NextRequest) {
     // Parse header
     const headers = rawData[0] as string[]
     const headerMap: Record<string, number> = {}
-    
+
     const requiredFields = ['name', 'email', 'phone', 'password', 'role']
     const missingFields: string[] = []
-    
+
     requiredFields.forEach(field => {
       const idx = headers.findIndex(h => h?.toString().toLowerCase().trim() === field.toLowerCase())
       if (idx === -1) {
@@ -82,7 +75,7 @@ export async function POST(request: NextRequest) {
     if (missingFields.length > 0) {
       console.error('Missing required columns:', missingFields)
       return NextResponse.json(
-        { error: `Missing required columns: ${missingFields.join(', ')}. Available columns: ${headers.join(', ')}` }, 
+        { error: `Missing required columns: ${missingFields.join(', ')}. Available columns: ${headers.join(', ')}` },
         { status: 400 }
       )
     }
@@ -100,16 +93,16 @@ export async function POST(request: NextRequest) {
 
     // Parse data rows
     const userData: UserImportData[] = []
-    const errors: Array<{row: number, error: string}> = []
+    const errors: Array<{ row: number, error: string }> = []
 
     for (let i = 1; i < rawData.length; i++) {
       const row = rawData[i]
-      
+
       // Skip empty rows
       if (!row || row.length === 0 || row.every(cell => !cell)) {
         continue
       }
-      
+
       try {
         const rowData: UserImportData = {
           name: String(row[headerMap['name']] || '').trim(),
@@ -134,19 +127,19 @@ export async function POST(request: NextRequest) {
 
         // Validate required fields
         if (!rowData.name || !rowData.email || !rowData.password) {
-          errors.push({row: i + 1, error: 'Missing required fields'})
+          errors.push({ row: i + 1, error: 'Missing required fields' })
           continue
         }
 
         // Validate email format
         if (!rowData.email.includes('@')) {
-          errors.push({row: i + 1, error: 'Invalid email format'})
+          errors.push({ row: i + 1, error: 'Invalid email format' })
           continue
         }
 
         // Validate role
         if (!['USER', 'TPS', 'ADMIN'].includes(rowData.role)) {
-          errors.push({row: i + 1, error: 'Invalid role. Must be USER, TPS, or ADMIN'})
+          errors.push({ row: i + 1, error: 'Invalid role. Must be USER, TPS, or ADMIN' })
           continue
         }
 
@@ -155,19 +148,19 @@ export async function POST(request: NextRequest) {
           rowData.tpsName = String(row[headerMap['tpsName']] || '').trim()
 
           if (!rowData.tpsName) {
-            errors.push({row: i + 1, error: 'TPS user must have tpsName (nama TPS dari database)'})
+            errors.push({ row: i + 1, error: 'TPS user must have tpsName (nama TPS dari database)' })
             continue
           }
         }
 
         userData.push(rowData)
       } catch (error) {
-        errors.push({row: i + 1, error: String(error)})
+        errors.push({ row: i + 1, error: String(error) })
       }
     }
 
     if (userData.length === 0) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'No valid data to import',
         validationErrors: errors
       }, { status: 400 })
@@ -179,20 +172,20 @@ export async function POST(request: NextRequest) {
       where: { email: { in: emails } },
       select: { email: true }
     })
-    
+
     const existingEmails = new Set(existingUsers.map(u => u.email))
     const duplicateErrors = userData
       .map((u, idx) => existingEmails.has(u.email) ? idx : -1)
       .filter(idx => idx !== -1)
       .forEach(idx => {
-        errors.push({row: idx + 2, error: `Email already exists: ${userData[idx].email}`})
+        errors.push({ row: idx + 2, error: `Email already exists: ${userData[idx].email}` })
       })
 
     // Filter out duplicates
     const validUserData = userData.filter(u => !existingEmails.has(u.email))
 
     if (validUserData.length === 0) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'All emails already exist',
         validationErrors: errors
       }, { status: 400 })
@@ -209,22 +202,22 @@ export async function POST(request: NextRequest) {
         if (user.role === 'TPS') {
           // Find existing TPS location by name
           console.log(`[TPS Lookup] Searching for TPS: "${user.tpsName}"`)
-          
+
           // Get all TPS and find by case-insensitive comparison
           const allTPS = await prisma.tPSLocation.findMany({
-            select: { 
-              id: true, 
-              name: true, 
-              latitude: true, 
-              longitude: true, 
-              address: true, 
-              phone: true, 
-              operatingHours: true, 
-              isActive: true 
+            select: {
+              id: true,
+              name: true,
+              latitude: true,
+              longitude: true,
+              address: true,
+              phone: true,
+              operatingHours: true,
+              isActive: true
             }
           })
-          
-          const tpsLocation = allTPS.find(tps => 
+
+          const tpsLocation = allTPS.find(tps =>
             tps.name.toLowerCase().trim() === user.tpsName!.toLowerCase().trim()
           )
 
@@ -236,7 +229,7 @@ export async function POST(request: NextRequest) {
               select: { name: true },
               orderBy: { name: 'asc' }
             })
-            
+
             const availableNames = availableTPS.map(t => t.name).join(', ')
             creationErrors.push({
               email: user.email,
@@ -280,7 +273,7 @@ export async function POST(request: NextRequest) {
               tpsProfile: true
             }
           })
-          
+
           createdUsers.push(createdUser)
         } else {
           // Create regular user or admin
@@ -293,7 +286,7 @@ export async function POST(request: NextRequest) {
               role: user.role
             }
           })
-          
+
           createdUsers.push(createdUser)
         }
       } catch (error) {
@@ -322,7 +315,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Import error:', error)
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: error instanceof Error ? error.message : 'Import failed'
     }, { status: 500 })
   }
@@ -332,7 +325,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session?.user || session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -354,7 +347,7 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error fetching TPS list:', error)
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: error instanceof Error ? error.message : 'Failed to fetch TPS list'
     }, { status: 500 })
   }

@@ -5,10 +5,21 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
 interface MapComponentProps {
-    // Choropleth props
-    choroplethGeoJson?: any // FeatureCollection
-    choroplethColors?: Record<string, string> // key: nama kecamatan, value: color
-    choroplethTransaksi?: Record<string, number> // key: nama kecamatan, value: transaksi
+  // Choropleth props
+  choroplethGeoJson?: any // FeatureCollection
+  choroplethColors?: Record<string, string> // key: nama kecamatan, value: color
+  choroplethTransaksi?: Record<string, number> // key: nama kecamatan, value: transaksi
+  // TPS Polygon props - for showing high-traffic areas
+  tpsPolygons?: Array<{
+    tpsId: string
+    lat: number
+    lng: number
+    tpsName: string
+    transactionCount: number
+    radius: number // in meters
+    color: string
+  }>
+  showTPSPolygons?: boolean
   /**
    * Optional route GeoJSON: Feature<LineString> to draw a real route (e.g. from user to TPS)
    */
@@ -68,13 +79,17 @@ export default function MapComponent(props: MapComponentProps) {
     fitRouteBoundsKey = 0,
     choroplethGeoJson = undefined,
     choroplethColors = undefined,
-    choroplethTransaksi = undefined
+    choroplethTransaksi = undefined,
+    tpsPolygons = [],
+    showTPSPolygons = false
   } = props;
 
   // GeoJSON ref for route
   const routeLayerRef = useRef<L.GeoJSON | null>(null)
   // Choropleth layer ref
   const choroplethLayerRef = useRef<L.GeoJSON | null>(null)
+  // TPS Polygon layer ref
+  const polygonLayersRef = useRef<L.Circle[]>([])
 
   const mapRef = useRef<L.Map | null>(null)
   const mapContainerRef = useRef<HTMLDivElement>(null)
@@ -154,7 +169,7 @@ export default function MapComponent(props: MapComponentProps) {
           if (!choroplethColors[kecamatanName]) {
             console.warn(`No color found for kecamatan: "${kecamatanName}" (Raw: "${kecamatanNameRaw}"). Using default.`);
           }
-          
+
           return {
             fillColor: color,
             weight: 2,
@@ -175,9 +190,60 @@ export default function MapComponent(props: MapComponentProps) {
         }
       }).addTo(mapRef.current);
     } else {
-        console.log('Choropleth props not available. Skipping layer.', { choroplethGeoJson, choroplethColors });
+      console.log('Choropleth props not available. Skipping layer.', { choroplethGeoJson, choroplethColors });
     }
   }, [choroplethGeoJson, choroplethColors, choroplethTransaksi]);
+
+  // TPS Polygon Layer Effect
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    // Remove previous polygon layers
+    polygonLayersRef.current.forEach(circle => {
+      if (mapRef.current) {
+        mapRef.current.removeLayer(circle);
+      }
+    });
+    polygonLayersRef.current = [];
+
+    // Only show polygons if enabled and data is available
+    if (showTPSPolygons && tpsPolygons && tpsPolygons.length > 0) {
+      console.log('Rendering TPS polygons:', tpsPolygons);
+
+      tpsPolygons.forEach(polygon => {
+        if (!mapRef.current) return;
+
+        // Create circle polygon
+        const circle = L.circle([polygon.lat, polygon.lng], {
+          color: polygon.color,
+          fillColor: polygon.color,
+          fillOpacity: 0.25,
+          weight: 2,
+          opacity: 0.6,
+          radius: polygon.radius // in meters
+        }).addTo(mapRef.current);
+
+        // Add tooltip
+        circle.bindTooltip(
+          `<div style="text-align: center;">
+            <b>${polygon.tpsName}</b><br>
+            <span style="color: #dc2626; font-weight: 600;">${polygon.transactionCount} transaksi</span><br>
+            <small style="color: #666;">Area radius: ${(polygon.radius / 1000).toFixed(1)} km</small>
+          </div>`,
+          {
+            permanent: false,
+            direction: 'top',
+            className: 'tps-polygon-tooltip',
+            opacity: 0.9
+          }
+        );
+
+        polygonLayersRef.current.push(circle);
+      });
+
+      console.log(`Rendered ${polygonLayersRef.current.length} TPS polygons`);
+    }
+  }, [tpsPolygons, showTPSPolygons]);
 
   // Custom icons
   const createIcon = (type: string, status?: string, isHighlighted?: boolean) => {
@@ -193,16 +259,16 @@ export default function MapComponent(props: MapComponentProps) {
       ON_THE_WAY: '#8B5CF6',
       PICKED_UP: '#10B981'
     }
-    
-    const color = isHighlighted 
+
+    const color = isHighlighted
       ? colors.highlighted
-      : status && colors[status as keyof typeof colors] 
+      : status && colors[status as keyof typeof colors]
         ? colors[status as keyof typeof colors]
         : colors[type as keyof typeof colors] || colors.pickup
-    
+
     const size = isHighlighted ? 48 : 32
     const pulse = isHighlighted ? 'animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;' : ''
-    
+
     const iconContent = {
       tps: '🏭',
       user: '👤',
@@ -289,7 +355,7 @@ export default function MapComponent(props: MapComponentProps) {
 
         // Handle drag end event if draggable
         if (draggable) {
-          marker.on('dragend', async function(event) {
+          marker.on('dragend', async function (event) {
             const position = event.target.getLatLng()
             try {
               const response = await fetch(
@@ -297,7 +363,7 @@ export default function MapComponent(props: MapComponentProps) {
               )
               const data = await response.json()
               const address = data.display_name || `${position.lat.toFixed(6)}, ${position.lng.toFixed(6)}`
-              
+
               marker.setPopupContent(`<b>Lokasi Dipilih</b><br>${address}<br><small>(Geser marker untuk mengubah)</small>`).openPopup()
               if (onLocationSelect) {
                 onLocationSelect(position.lat, position.lng, address)
@@ -317,11 +383,11 @@ export default function MapComponent(props: MapComponentProps) {
           )
           const data = await response.json()
           const address = data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`
-          
-          const popupContent = draggable 
+
+          const popupContent = draggable
             ? `<b>Lokasi Dipilih</b><br>${address}<br><small>(Geser marker untuk mengubah)</small>`
             : `<b>Lokasi Dipilih</b><br>${address}`
-            
+
           marker.bindPopup(popupContent).openPopup()
           onLocationSelect(lat, lng, address)
         } catch {
@@ -343,18 +409,18 @@ export default function MapComponent(props: MapComponentProps) {
     if (!showRemoveButton && selectedMarker && mapRef.current) {
       mapRef.current.removeLayer(selectedMarker)
       setSelectedMarker(null)
-      
+
       // Hapus lingkaran radius jika ada
       if (radiusCircleRef.current && mapRef.current) {
         mapRef.current.removeLayer(radiusCircleRef.current)
         radiusCircleRef.current = null
       }
-      
+
       // Reset filter dan search results
       setFilteredMarkers([])
       setSearchResults([])
       setShowResults(false)
-      
+
       // Reset TPS yang dipilih - ini akan trigger useEffect untuk re-render markers
       setSelectedTPSId('')
       setForceRefresh(prev => prev + 1) // Force re-render markers
@@ -365,7 +431,7 @@ export default function MapComponent(props: MapComponentProps) {
   useEffect(() => {
     if (externalSelectedTPSId && externalSelectedTPSId !== selectedTPSId) {
       setSelectedTPSId(externalSelectedTPSId)
-      
+
       // Pan map ke lokasi TPS yang dipilih
       const selectedMarkerData = markers.find(m => m.id === externalSelectedTPSId)
       if (selectedMarkerData && mapRef.current) {
@@ -427,13 +493,13 @@ export default function MapComponent(props: MapComponentProps) {
       // Gunakan warna merah jika TPS ini dipilih
       const isSelected = marker.id === selectedTPSId
       const iconType = isSelected ? 'selected' : (marker.type || 'pickup')
-      
+
       const leafletMarker = L.marker([marker.lat, marker.lng], {
         icon: createIcon(iconType, marker.status, isHighlighted)
       }).addTo(mapRef.current!)
 
       markersLayerRef.current.push(leafletMarker)
-      
+
       // Jika marker di-highlight, pan ke marker dan open popup
       if (isHighlighted) {
         mapRef.current?.setView([marker.lat, marker.lng], 16, { animate: true })
@@ -445,7 +511,7 @@ export default function MapComponent(props: MapComponentProps) {
       // Create popup content with photos
       let popupContent = `<div style="min-width: 200px; max-width: 300px;">`
       popupContent += `<b style="font-size: 14px;">${marker.title}</b><br>`
-      
+
       // TPS specific info
       if (marker.type === 'tps') {
         if (marker.kecamatan) {
@@ -462,7 +528,7 @@ export default function MapComponent(props: MapComponentProps) {
         }
         popupContent += `<div style="margin-top: 8px;"><small style="color: #059669; font-weight: 600;">Klik untuk memilih TPS ini</small></div>`
       }
-      
+
       if (marker.status) {
         const statusLabels: Record<string, string> = {
           PENDING: 'Menunggu',
@@ -528,7 +594,7 @@ export default function MapComponent(props: MapComponentProps) {
 
       // Open popup on hover for TPS view
       if (marker.type === 'pickup') {
-        leafletMarker.on('mouseover', function(this: L.Marker) {
+        leafletMarker.on('mouseover', function (this: L.Marker) {
           this.openPopup()
         })
       }
@@ -558,7 +624,7 @@ export default function MapComponent(props: MapComponentProps) {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords
-          
+
           if (mapRef.current) {
             mapRef.current.setView([latitude, longitude], 15)
 
@@ -577,7 +643,7 @@ export default function MapComponent(props: MapComponentProps) {
 
               // Handle drag if draggable
               if (draggable) {
-                marker.on('dragend', async function(event) {
+                marker.on('dragend', async function (event) {
                   const position = event.target.getLatLng()
                   try {
                     const response = await fetch(
@@ -604,11 +670,11 @@ export default function MapComponent(props: MapComponentProps) {
                 )
                 const data = await response.json()
                 const address = data.display_name
-                
-                const popupText = draggable 
+
+                const popupText = draggable
                   ? `<b>Lokasi Anda</b><br>${address}<br><small>(Geser marker untuk mengubah)</small>`
                   : `<b>Lokasi Anda</b><br>${address}`
-                
+
                 marker.bindPopup(popupText).openPopup()
                 onLocationSelect(latitude, longitude, address)
               } catch {
@@ -631,22 +697,22 @@ export default function MapComponent(props: MapComponentProps) {
     if (selectedMarker && mapRef.current) {
       mapRef.current.removeLayer(selectedMarker)
       setSelectedMarker(null)
-      
+
       // Hapus lingkaran radius jika ada
       if (radiusCircleRef.current && mapRef.current) {
         mapRef.current.removeLayer(radiusCircleRef.current)
         radiusCircleRef.current = null
       }
-      
+
       // Reset filter dan search results
       setFilteredMarkers([])
       setSearchResults([])
       setShowResults(false)
-      
+
       // Reset TPS yang dipilih - ini akan trigger useEffect untuk re-render markers
       setSelectedTPSId('')
       setForceRefresh(prev => prev + 1) // Force re-render markers
-      
+
       if (onMarkerRemove) {
         onMarkerRemove()
       }
@@ -656,7 +722,7 @@ export default function MapComponent(props: MapComponentProps) {
   // A. SEARCH NON-SPASIAL (berbasis atribut)
   // 1. Search berdasarkan nama objek (TPS)
   const searchByName = (query: string) => {
-    const filtered = markers.filter(marker => 
+    const filtered = markers.filter(marker =>
       marker.title.toLowerCase().includes(query.toLowerCase()) ||
       (marker.address && marker.address.toLowerCase().includes(query.toLowerCase()))
     )
@@ -666,7 +732,7 @@ export default function MapComponent(props: MapComponentProps) {
   // 2. Filter berdasarkan kategori (kecamatan)
   const filterByKecamatan = (kecamatan: string) => {
     if (!kecamatan) return markers
-    const filtered = markers.filter(marker => 
+    const filtered = markers.filter(marker =>
       marker.kecamatan && marker.kecamatan.toLowerCase() === kecamatan.toLowerCase()
     )
     return filtered
@@ -678,11 +744,11 @@ export default function MapComponent(props: MapComponentProps) {
     const R = 6371 // Radius bumi dalam km
     const dLat = (lat2 - lat1) * Math.PI / 180
     const dLon = (lon2 - lon1) * Math.PI / 180
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon/2) * Math.sin(dLon/2)
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+      Math.sin(dLon / 2) * Math.sin(dLon / 2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
     return R * c
   }
 
@@ -697,7 +763,7 @@ export default function MapComponent(props: MapComponentProps) {
   // Unified search handler
   const handleSearch = async (query: string) => {
     setSearchQuery(query)
-    
+
     if (query.length < 2) {
       setSearchResults([])
       setShowResults(false)
@@ -838,7 +904,7 @@ export default function MapComponent(props: MapComponentProps) {
 
       // Handle drag if draggable
       if (draggable) {
-        marker.on('dragend', async function(event) {
+        marker.on('dragend', async function (event) {
           const position = event.target.getLatLng()
           try {
             const response = await fetch(
@@ -846,7 +912,7 @@ export default function MapComponent(props: MapComponentProps) {
             )
             const data = await response.json()
             const newAddress = data.display_name || `${position.lat.toFixed(6)}, ${position.lng.toFixed(6)}`
-            
+
             marker.setPopupContent(`<b>Lokasi Dipilih</b><br>${newAddress}<br><small>(Geser marker untuk mengubah)</small>`).openPopup()
             if (onLocationSelect) {
               onLocationSelect(position.lat, position.lng, newAddress)
@@ -859,10 +925,10 @@ export default function MapComponent(props: MapComponentProps) {
         })
       }
 
-      const popupContent = draggable 
+      const popupContent = draggable
         ? `<b>Lokasi Dipilih</b><br>${address}<br><small>(Geser marker untuk mengubah)</small>`
         : `<b>Lokasi Dipilih</b><br>${address}`
-        
+
       marker.bindPopup(popupContent).openPopup()
       onLocationSelect(lat, lng, address)
     }
@@ -875,7 +941,7 @@ export default function MapComponent(props: MapComponentProps) {
   return (
     <div className="relative">
       <div ref={mapContainerRef} className={className} />
-      
+
       {/* Search Box */}
       {selectable && (
         <div className="absolute top-4 left-4 right-4 z-[1000]">
@@ -892,11 +958,10 @@ export default function MapComponent(props: MapComponentProps) {
                   setSelectedKecamatan('')
                   setFilteredMarkers([])
                 }}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition ${
-                  searchType === 'name' 
-                    ? 'bg-green-500 text-white' 
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition ${searchType === 'name'
+                    ? 'bg-green-500 text-white'
                     : 'bg-white text-gray-700 border border-gray-300'
-                }`}
+                  }`}
               >
                 Nama TPS
               </button>
@@ -910,11 +975,10 @@ export default function MapComponent(props: MapComponentProps) {
                   setSelectedKecamatan('')
                   setFilteredMarkers([])
                 }}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition ${
-                  searchType === 'radius' 
-                    ? 'bg-green-500 text-white' 
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition ${searchType === 'radius'
+                    ? 'bg-green-500 text-white'
                     : 'bg-white text-gray-700 border border-gray-300'
-                }`}
+                  }`}
               >
                 Radius
               </button>
@@ -923,20 +987,20 @@ export default function MapComponent(props: MapComponentProps) {
             {/* Search Input - untuk nama dan kategori */}
             {searchType !== 'radius' && (
               <div className="relative">
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  width="20" 
-                  height="20" 
-                  viewBox="0 0 24 24" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
-                  strokeLinecap="round" 
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
                   strokeLinejoin="round"
                   className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
                 >
-                  <circle cx="11" cy="11" r="8"/>
-                  <path d="m21 21-4.35-4.35"/>
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.35-4.35" />
                 </svg>
                 <input
                   type="text"
@@ -944,8 +1008,8 @@ export default function MapComponent(props: MapComponentProps) {
                   onChange={(e) => handleSearch(e.target.value)}
                   onFocus={() => searchResults.length > 0 && setShowResults(true)}
                   placeholder={
-                    searchType === 'name' 
-                      ? 'Cari nama TPS...' 
+                    searchType === 'name'
+                      ? 'Cari nama TPS...'
                       : 'Cari kecamatan...'
                   }
                   className="w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-lg shadow-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
@@ -988,8 +1052,8 @@ export default function MapComponent(props: MapComponentProps) {
                     disabled={!currentLat || !currentLng}
                     className="w-full bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition disabled:bg-gray-300 disabled:cursor-not-allowed text-sm font-medium"
                   >
-                    {!currentLat || !currentLng 
-                      ? 'Pilih lokasi terlebih dahulu' 
+                    {!currentLat || !currentLng
+                      ? 'Pilih lokasi terlebih dahulu'
                       : `Cari dalam radius ${searchRadius} km`
                     }
                   </button>
@@ -1013,7 +1077,7 @@ export default function MapComponent(props: MapComponentProps) {
                                 onClick={() => {
                                   // Set selected TPS untuk highlight dengan warna merah
                                   setSelectedTPSId(marker.id)
-                                  
+
                                   if (onTPSSelect && marker.type === 'tps') {
                                     onTPSSelect(marker.id, marker.lat, marker.lng, marker.address || '')
                                   }
@@ -1021,11 +1085,10 @@ export default function MapComponent(props: MapComponentProps) {
                                     mapRef.current.flyTo([marker.lat, marker.lng], 16, { duration: 1 })
                                   }
                                 }}
-                                className={`w-full text-left p-2 rounded-lg transition text-xs ${
-                                  marker.id === selectedTPSId 
-                                    ? 'bg-red-100 border border-red-300' 
+                                className={`w-full text-left p-2 rounded-lg transition text-xs ${marker.id === selectedTPSId
+                                    ? 'bg-red-100 border border-red-300'
                                     : 'bg-green-50 hover:bg-green-100'
-                                }`}
+                                  }`}
                               >
                                 <div className="flex items-start justify-between">
                                   <div className="flex items-start space-x-2 flex-1 min-w-0">
@@ -1054,7 +1117,7 @@ export default function MapComponent(props: MapComponentProps) {
                 </div>
               </div>
             )}
-            
+
             {/* Search Results Dropdown */}
             {showResults && searchResults.length > 0 && searchType !== 'radius' && (
               <div className="absolute top-full mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-xl max-h-64 overflow-y-auto z-[1001]">
@@ -1082,7 +1145,7 @@ export default function MapComponent(props: MapComponentProps) {
                     </div>
                   </button>
                 ))}
-                
+
                 {searchType === 'category' && (
                   <div className="p-2">
                     {/* If kecamatan selected, show TPS list */}
@@ -1117,11 +1180,10 @@ export default function MapComponent(props: MapComponentProps) {
                                   mapRef.current.flyTo([tps.lat, tps.lng], 16, { duration: 1 })
                                 }
                               }}
-                              className={`w-full text-left px-3 py-2 rounded-lg transition text-xs ${
-                                tps.id === selectedTPSId
+                              className={`w-full text-left px-3 py-2 rounded-lg transition text-xs ${tps.id === selectedTPSId
                                   ? 'bg-red-100 border border-red-300'
                                   : 'bg-green-50 hover:bg-green-100'
-                              }`}
+                                }`}
                             >
                               <div className="flex items-start space-x-2">
                                 <span className="text-base">🏭</span>
@@ -1156,20 +1218,20 @@ export default function MapComponent(props: MapComponentProps) {
                               className="w-full text-left px-4 py-3 hover:bg-green-50 transition-colors rounded-lg flex items-center justify-between"
                             >
                               <div className="flex items-center space-x-2">
-                                <svg 
-                                  xmlns="http://www.w3.org/2000/svg" 
-                                  width="16" 
-                                  height="16" 
-                                  viewBox="0 0 24 24" 
-                                  fill="none" 
-                                  stroke="currentColor" 
-                                  strokeWidth="2" 
-                                  strokeLinecap="round" 
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="16"
+                                  height="16"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
                                   strokeLinejoin="round"
                                   className="text-green-500"
                                 >
-                                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                                  <circle cx="12" cy="10" r="3"/>
+                                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                                  <circle cx="12" cy="10" r="3" />
                                 </svg>
                                 <p className="font-medium text-gray-900 text-sm">
                                   {kecamatan}
@@ -1184,7 +1246,7 @@ export default function MapComponent(props: MapComponentProps) {
                     )}
                   </div>
                 )}
-                
+
                 {searchResults.length === 0 && (
                   <div className="px-4 py-3 text-center text-gray-500 text-sm">
                     Tidak ada hasil ditemukan
@@ -1203,20 +1265,20 @@ export default function MapComponent(props: MapComponentProps) {
                     className="w-full text-left px-4 py-3 hover:bg-green-50 transition-colors border-b border-gray-100 last:border-b-0"
                   >
                     <div className="flex items-start space-x-2">
-                      <svg 
-                        xmlns="http://www.w3.org/2000/svg" 
-                        width="16" 
-                        height="16" 
-                        viewBox="0 0 24 24" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        strokeWidth="2" 
-                        strokeLinecap="round" 
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
                         strokeLinejoin="round"
                         className="text-green-500 mt-1 flex-shrink-0"
                       >
-                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                        <circle cx="12" cy="10" r="3"/>
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                        <circle cx="12" cy="10" r="3" />
                       </svg>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-gray-900 text-sm truncate">
@@ -1234,7 +1296,7 @@ export default function MapComponent(props: MapComponentProps) {
           </div>
         </div>
       )}
-      
+
       <button
         type="button"
         onClick={getCurrentLocation}
@@ -1242,12 +1304,12 @@ export default function MapComponent(props: MapComponentProps) {
         title="Gunakan lokasi saya"
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10"/>
-          <circle cx="12" cy="12" r="3"/>
-          <line x1="12" y1="2" x2="12" y2="4"/>
-          <line x1="12" y1="20" x2="12" y2="22"/>
-          <line x1="2" y1="12" x2="4" y2="12"/>
-          <line x1="20" y1="12" x2="22" y2="12"/>
+          <circle cx="12" cy="12" r="10" />
+          <circle cx="12" cy="12" r="3" />
+          <line x1="12" y1="2" x2="12" y2="4" />
+          <line x1="12" y1="20" x2="12" y2="22" />
+          <line x1="2" y1="12" x2="4" y2="12" />
+          <line x1="20" y1="12" x2="22" y2="12" />
         </svg>
         <span>Lokasi Saya</span>
       </button>
@@ -1259,8 +1321,8 @@ export default function MapComponent(props: MapComponentProps) {
           title="Hapus lokasi yang dipilih"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="3 6 5 6 21 6"/>
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
           </svg>
           <span>Hapus Marker</span>
         </button>

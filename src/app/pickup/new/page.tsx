@@ -68,64 +68,64 @@ export default function NewPickupPage() {
 
       // 2. Fetch stats for choropleth, but don't let it break the map
       try {
-          const statsRes = await fetch('/api/pickups/stats/by-kecamatan');
-          if (!statsRes.ok) {
-            // Don't throw, just log and exit gracefully
-            console.warn('Gagal memuat data statistik untuk choropleth');
-            toast.error('Gagal memuat statistik warna peta');
-            return;
-          }
+        const statsRes = await fetch('/api/pickups/stats/by-kecamatan');
+        if (!statsRes.ok) {
+          // Don't throw, just log and exit gracefully
+          console.warn('Gagal memuat data statistik untuk choropleth');
+          toast.error('Gagal memuat statistik warna peta');
+          return;
+        }
 
-          const statsData = await statsRes.json();
-          console.log("Fetched Stats:", statsData);
+        const statsData = await statsRes.json();
+        console.log("Fetched Stats:", statsData);
 
-          // 3. Process stats data
-          let transaksiData: Record<string, number> = {};
-          if (statsData.pickupByKecamatan) {
-            transaksiData = statsData.pickupByKecamatan.reduce((acc: any, item: any) => {
-              if (item.kecamatan) { // Ensure kecamatan is not null/undefined
-                const kecamatanName = toTitleCase(item.kecamatan);
-                acc[kecamatanName] = item._count.kecamatan;
-              }
-              return acc;
-            }, {});
-          }
-          console.log("Processed Transaksi Data:", transaksiData);
+        // 3. Process stats data
+        let transaksiData: Record<string, number> = {};
+        if (statsData.pickupByKecamatan) {
+          transaksiData = statsData.pickupByKecamatan.reduce((acc: any, item: any) => {
+            if (item.kecamatan) { // Ensure kecamatan is not null/undefined
+              const kecamatanName = toTitleCase(item.kecamatan);
+              acc[kecamatanName] = item._count.kecamatan;
+            }
+            return acc;
+          }, {});
+        }
+        console.log("Processed Transaksi Data:", transaksiData);
 
-          // 4. Generate colors from the processed data
-          const values = Object.values(transaksiData);
-          if (values.length === 0) {
-            console.log("No transaction data found, using default colors.");
-            setTransaksiPerKecamatan({});
-            setChoroplethColors({});
-            return;
-          }
+        // 4. Generate colors from the processed data
+        const values = Object.values(transaksiData);
+        if (values.length === 0) {
+          console.log("No transaction data found, using default colors.");
+          setTransaksiPerKecamatan({});
+          setChoroplethColors({});
+          return;
+        }
 
-          const minValue = Math.min(...values);
-          const maxValue = Math.max(...values);
-          const startColor = [187, 247, 208]; // green-200
-          const endColor = [22, 101, 52];     // green-900
+        const minValue = Math.min(...values);
+        const maxValue = Math.max(...values);
+        const startColor = [187, 247, 208]; // green-200
+        const endColor = [22, 101, 52];     // green-900
 
-          const newColors: Record<string, string> = {};
-          for (const kecamatan in transaksiData) {
-            const value = transaksiData[kecamatan];
-            const ratio = maxValue > minValue ? (value - minValue) / (maxValue - minValue) : 1;
-            
-            const r = Math.round(startColor[0] + ratio * (endColor[0] - startColor[0]));
-            const g = Math.round(startColor[1] + ratio * (endColor[1] - startColor[1]));
-            const b = Math.round(startColor[2] + ratio * (endColor[2] - startColor[2]));
-            
-            newColors[kecamatan] = `rgb(${r}, ${g}, ${b})`;
-          }
-          console.log("Generated Colors:", newColors);
+        const newColors: Record<string, string> = {};
+        for (const kecamatan in transaksiData) {
+          const value = transaksiData[kecamatan];
+          const ratio = maxValue > minValue ? (value - minValue) / (maxValue - minValue) : 1;
 
-          // 5. Set the color states
-          setTransaksiPerKecamatan(transaksiData);
-          setChoroplethColors(newColors);
+          const r = Math.round(startColor[0] + ratio * (endColor[0] - startColor[0]));
+          const g = Math.round(startColor[1] + ratio * (endColor[1] - startColor[1]));
+          const b = Math.round(startColor[2] + ratio * (endColor[2] - startColor[2]));
+
+          newColors[kecamatan] = `rgb(${r}, ${g}, ${b})`;
+        }
+        console.log("Generated Colors:", newColors);
+
+        // 5. Set the color states
+        setTransaksiPerKecamatan(transaksiData);
+        setChoroplethColors(newColors);
 
       } catch (statsError) {
-           console.error('Error loading stats for choropleth:', statsError);
-           toast.error('Gagal memuat statistik warna peta');
+        console.error('Error loading stats for choropleth:', statsError);
+        toast.error('Gagal memuat statistik warna peta');
       }
     };
 
@@ -133,7 +133,70 @@ export default function NewPickupPage() {
       loadChoroplethData();
     }
   }, [orderType]);
-  
+
+  // Fetch TPS polygon data for high-traffic areas (jemput mode only)
+  useEffect(() => {
+    const loadTPSPolygons = async () => {
+      if (orderType !== 'jemput') {
+        setTpsPolygons([]);
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/pickups/stats/by-tps');
+        if (!res.ok) {
+          console.warn('Failed to load TPS polygon data');
+          return;
+        }
+
+        const data = await res.json();
+        console.log('TPS Stats received:', data);
+
+        if (!data.tpsStats || data.tpsStats.length === 0) {
+          console.log('No TPS stats available');
+          setTpsPolygons([]);
+          return;
+        }
+
+        // Calculate color and radius for each TPS
+        const { minTransactions, maxTransactions } = data.metadata;
+        const minRadius = 500; // 0.5 km
+        const maxRadius = 2000; // 2 km
+
+        const polygons = data.tpsStats.map((tps: any) => {
+          // Calculate radius based on transaction count (dynamic)
+          const ratio = maxTransactions > minTransactions
+            ? (tps.transactionCount - minTransactions) / (maxTransactions - minTransactions)
+            : 1;
+          const radius = minRadius + ratio * (maxRadius - minRadius);
+
+          // Calculate color: yellow (255, 255, 0) -> red (255, 0, 0)
+          const r = 255;
+          const g = Math.floor(255 * (1 - ratio)); // Yellow to red gradient
+          const b = 0;
+          const color = `rgb(${r}, ${g}, ${b})`;
+
+          return {
+            tpsId: tps.tpsId,
+            lat: tps.latitude,
+            lng: tps.longitude,
+            tpsName: tps.tpsName,
+            transactionCount: tps.transactionCount,
+            radius: Math.round(radius),
+            color
+          };
+        });
+
+        console.log('Processed TPS polygons:', polygons);
+        setTpsPolygons(polygons);
+      } catch (error) {
+        console.error('Error loading TPS polygons:', error);
+      }
+    };
+
+    loadTPSPolygons();
+  }, [orderType]);
+
   // GeoJSON route state (for antar)
   const [routeGeoJson, setRouteGeoJson] = useState<any>(undefined)
   // Simpan lokasi awal user (saat pertama kali pilih lokasi)
@@ -159,6 +222,10 @@ export default function NewPickupPage() {
   const [isLoadingTPS, setIsLoadingTPS] = useState(true)
   // Simpan 5 TPS terdekat pertama kali lokasi user dipilih
   const [fixedNearestTPS, setFixedNearestTPS] = useState<TPSLocation[] | null>(null)
+
+  // TPS Polygon states for high-traffic areas
+  const [tpsPolygons, setTpsPolygons] = useState<any[]>([])
+  const [showTPSPolygons, setShowTPSPolygons] = useState(true) // Default ON for jemput mode
 
   // Address search state
   const [isSearchingAddress, setIsSearchingAddress] = useState(false)
@@ -188,10 +255,10 @@ export default function NewPickupPage() {
       try {
         const res = await fetch('/api/tps-locations')
         const data = await res.json()
-        
+
         if (res.ok && data.data) {
           setTpsLocations(data.data)
-          
+
           // Create markers for map
           const markers = data.data.map((tps: TPSLocation) => ({
             id: tps.id,
@@ -297,7 +364,7 @@ export default function NewPickupPage() {
   // Generate full address from detail form
   const generateDetailAddress = (): string => {
     const parts: string[] = []
-    
+
     if (detailAddress.street) parts.push(detailAddress.street)
     if (detailAddress.number) parts.push(`No. ${detailAddress.number}`)
     if (detailAddress.rtRw) parts.push(detailAddress.rtRw)
@@ -305,14 +372,14 @@ export default function NewPickupPage() {
     if (detailAddress.subdistrict) parts.push(detailAddress.subdistrict)
     if (detailAddress.district) parts.push(`Kec. ${detailAddress.district}`)
     if (detailAddress.city) parts.push(detailAddress.city)
-    
+
     return parts.filter(p => p.length > 0).join(', ')
   }
 
   // Handle search from detail address form
   const handleDetailAddressSearch = async () => {
     const fullAddress = generateDetailAddress()
-    
+
     if (!fullAddress.trim()) {
       toast.error('Isi minimal jalan dan subdistrict')
       return
@@ -324,9 +391,9 @@ export default function NewPickupPage() {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddress)}&limit=10`
       )
-      
+
       if (!response.ok) throw new Error('API error')
-      
+
       const results = await response.json()
 
       if (results && results.length > 0) {
@@ -352,7 +419,7 @@ export default function NewPickupPage() {
 
   // Filter kecamatan dari SURABAYA_KECAMATAN yang memiliki TPS
   const kecamatanWithTPS = Array.from(new Set(tpsLocations.map((tps: TPSLocation) => tps.kecamatan)))
-  const filteredKecamatan = SURABAYA_KECAMATAN.filter((k: string) => 
+  const filteredKecamatan = SURABAYA_KECAMATAN.filter((k: string) =>
     k.toLowerCase().includes(searchKecamatan.toLowerCase()) &&
     kecamatanWithTPS.includes(k)
   )
@@ -367,7 +434,7 @@ export default function NewPickupPage() {
     const R = 6371 // Earth's radius in km
     const dLat = (lat2 - lat1) * Math.PI / 180
     const dLon = (lon2 - lon1) * Math.PI / 180
-    const a = 
+    const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
       Math.sin(dLon / 2) * Math.sin(dLon / 2)
@@ -378,7 +445,7 @@ export default function NewPickupPage() {
   // Get nearest TPS from current location
   const getNearestTPS = (): TPSLocation | null => {
     if (!latitude || !longitude) return null
-    
+
     let nearest: TPSLocation | null = null
     let minDistance = Infinity
 
@@ -413,12 +480,12 @@ export default function NewPickupPage() {
       formData.append('address', address)
       formData.append('description', description)
       formData.append('wasteItems', JSON.stringify(wasteItems))
-      
+
       // Append TPS ID if user selected a TPS
       if (selectedTPS?.id) {
         formData.append('tpsId', selectedTPS.id)
       }
-      
+
       if (scheduledAt) {
         formData.append('scheduledAt', scheduledAt)
       }
@@ -491,11 +558,10 @@ export default function NewPickupPage() {
         ].map((s, i) => (
           <div key={s.num} className="flex items-center">
             <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                step >= s.num
-                  ? 'bg-green-600 text-white'
-                  : 'bg-green-100 text-green-600'
-              }`}
+              className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${step >= s.num
+                ? 'bg-green-600 text-white'
+                : 'bg-green-100 text-green-600'
+                }`}
             >
               {s.num + 1}
             </div>
@@ -558,7 +624,7 @@ export default function NewPickupPage() {
               <label className="block text-sm font-semibold text-purple-900 mb-4">
                 📝 Form Pengisian Detail Alamat (Patokan)
               </label>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
                 {/* Street */}
                 <div>
@@ -566,7 +632,7 @@ export default function NewPickupPage() {
                   <input
                     type="text"
                     value={detailAddress.street}
-                    onChange={(e) => setDetailAddress({...detailAddress, street: e.target.value})}
+                    onChange={(e) => setDetailAddress({ ...detailAddress, street: e.target.value })}
                     placeholder="Contoh: Jl. Ahmad Yani"
                     className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
                   />
@@ -578,7 +644,7 @@ export default function NewPickupPage() {
                   <input
                     type="text"
                     value={detailAddress.number}
-                    onChange={(e) => setDetailAddress({...detailAddress, number: e.target.value})}
+                    onChange={(e) => setDetailAddress({ ...detailAddress, number: e.target.value })}
                     placeholder="Contoh: 123"
                     className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
                   />
@@ -590,7 +656,7 @@ export default function NewPickupPage() {
                   <input
                     type="text"
                     value={detailAddress.rtRw}
-                    onChange={(e) => setDetailAddress({...detailAddress, rtRw: e.target.value})}
+                    onChange={(e) => setDetailAddress({ ...detailAddress, rtRw: e.target.value })}
                     placeholder="Contoh: RT 05 / RW 12"
                     className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
                   />
@@ -602,7 +668,7 @@ export default function NewPickupPage() {
                   <input
                     type="text"
                     value={detailAddress.village}
-                    onChange={(e) => setDetailAddress({...detailAddress, village: e.target.value})}
+                    onChange={(e) => setDetailAddress({ ...detailAddress, village: e.target.value })}
                     placeholder="Contoh: Keputih"
                     className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
                   />
@@ -614,7 +680,7 @@ export default function NewPickupPage() {
                   <input
                     type="text"
                     value={detailAddress.subdistrict}
-                    onChange={(e) => setDetailAddress({...detailAddress, subdistrict: e.target.value})}
+                    onChange={(e) => setDetailAddress({ ...detailAddress, subdistrict: e.target.value })}
                     placeholder="Contoh: Sukolilo"
                     className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
                   />
@@ -626,7 +692,7 @@ export default function NewPickupPage() {
                   <input
                     type="text"
                     value={detailAddress.district}
-                    onChange={(e) => setDetailAddress({...detailAddress, district: e.target.value})}
+                    onChange={(e) => setDetailAddress({ ...detailAddress, district: e.target.value })}
                     placeholder="Contoh: Sukolilo"
                     className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
                   />
@@ -638,7 +704,7 @@ export default function NewPickupPage() {
                   <input
                     type="text"
                     value={detailAddress.zipcode}
-                    onChange={(e) => setDetailAddress({...detailAddress, zipcode: e.target.value})}
+                    onChange={(e) => setDetailAddress({ ...detailAddress, zipcode: e.target.value })}
                     placeholder="Contoh: 60111"
                     className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
                   />
@@ -673,7 +739,7 @@ export default function NewPickupPage() {
               </button>
             </div>
 
-            
+
             {/* Layout Grid: Map + Sidebar */}
             <div className="grid md:grid-cols-3 gap-4">
               {/* Map Section - 2/3 width */}
@@ -693,12 +759,34 @@ export default function NewPickupPage() {
                     className="h-[500px] w-full"
                     routeGeoJson={orderType === 'antar' && routeGeoJson ? routeGeoJson : undefined}
                     fitRouteBoundsKey={fitRouteBoundsKey}
-                    
+
                     // Choropleth props
                     choroplethGeoJson={orderType === 'jemput' ? kecamatanGeoJson : undefined}
                     choroplethColors={orderType === 'jemput' ? choroplethColors : undefined}
                     choroplethTransaksi={orderType === 'jemput' ? transaksiPerKecamatan : undefined}
+
+                    // TPS Polygon props
+                    tpsPolygons={orderType === 'jemput' && showTPSPolygons ? tpsPolygons : []}
+                    showTPSPolygons={orderType === 'jemput' && showTPSPolygons}
                   />
+
+                  {/* Toggle for TPS Polygons */}
+                  {orderType === 'jemput' && tpsPolygons.length > 0 && (
+                    <div className="absolute top-4 left-4 bg-white/95 rounded-lg shadow-lg border border-orange-200 p-3 z-50">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={showTPSPolygons}
+                          onChange={(e) => setShowTPSPolygons(e.target.checked)}
+                          className="w-4 h-4 text-orange-600 rounded focus:ring-orange-500"
+                        />
+                        <span className="text-sm font-medium text-gray-700">
+                          Tampilkan Area TPS Populer
+                        </span>
+                      </label>
+                    </div>
+                  )}
+
                   {/* Choropleth Legend */}
                   {orderType === 'jemput' && kecamatanGeoJson && Object.keys(transaksiPerKecamatan).length > 0 && (
                     <div className="absolute top-4 right-4 bg-white/90 rounded-lg shadow-lg border border-green-200 p-4 z-50 w-56">
@@ -711,6 +799,33 @@ export default function NewPickupPage() {
                       <div className="flex justify-between text-xs text-green-700">
                         <span>Min: {Math.min(...Object.values(transaksiPerKecamatan))}</span>
                         <span>Max: {Math.max(...Object.values(transaksiPerKecamatan))}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TPS Polygon Legend */}
+                  {orderType === 'jemput' && showTPSPolygons && tpsPolygons.length > 0 && (
+                    <div className="absolute bottom-4 right-4 bg-white/95 rounded-lg shadow-lg border border-orange-200 p-4 z-50 w-64">
+                      <div className="font-bold text-orange-800 mb-3 text-sm flex items-center gap-2">
+                        <span className="text-lg">🔥</span>
+                        Area TPS dengan Traffic Tinggi
+                      </div>
+                      <div className="space-y-2 mb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-600 w-16">Rendah</span>
+                          <div className="flex-1 h-4 rounded" style={{ background: 'linear-gradient(to right, rgb(255, 255, 0), rgb(255, 0, 0))' }} />
+                          <span className="text-xs text-gray-600 w-16 text-right">Tinggi</span>
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-600 border-t pt-2">
+                        <div className="flex justify-between mb-1">
+                          <span>📊 Menampilkan:</span>
+                          <span className="font-semibold text-orange-700">Top 25% TPS</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>📍 Jumlah area:</span>
+                          <span className="font-semibold text-orange-700">{tpsPolygons.length} lokasi</span>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -761,11 +876,10 @@ export default function NewPickupPage() {
                               <button
                                 key={tps.id}
                                 onClick={() => handleTPSSelect(tps.id, tps.latitude, tps.longitude, tps.address)}
-                                className={`w-full text-left px-3 py-2 rounded-lg transition text-sm border flex flex-col gap-1 ${
-                                  isTPSSelected
-                                    ? 'bg-green-100 border-green-500'
-                                    : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
-                                }`}
+                                className={`w-full text-left px-3 py-2 rounded-lg transition text-sm border flex flex-col gap-1 ${isTPSSelected
+                                  ? 'bg-green-100 border-green-500'
+                                  : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
+                                  }`}
                               >
                                 <div className="flex justify-between items-center">
                                   <span className="font-medium text-green-800">{tps.name}</span>
@@ -824,11 +938,10 @@ export default function NewPickupPage() {
                                 <div key={kec}>
                                   <button
                                     onClick={() => handleKecamatanSelect(kec)}
-                                    className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between transition ${
-                                      isSelected
-                                        ? 'bg-green-500 text-white'
-                                        : 'hover:bg-gray-100 text-gray-700'
-                                    }`}
+                                    className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between transition ${isSelected
+                                      ? 'bg-green-500 text-white'
+                                      : 'hover:bg-gray-100 text-gray-700'
+                                      }`}
                                   >
                                     <div className="flex-1">
                                       <p className={`font-medium text-sm ${isSelected ? 'text-white' : 'text-gray-900'}`}>
@@ -838,9 +951,9 @@ export default function NewPickupPage() {
                                         {tpsCount} TPS tersedia
                                       </p>
                                     </div>
-                                    <ChevronRight 
-                                      size={16} 
-                                      className={`transition-transform ${isSelected ? 'text-white rotate-90' : 'text-gray-400'}`} 
+                                    <ChevronRight
+                                      size={16}
+                                      className={`transition-transform ${isSelected ? 'text-white rotate-90' : 'text-gray-400'}`}
                                     />
                                   </button>
                                   {/* TPS List - shown when kecamatan selected */}
@@ -852,11 +965,10 @@ export default function NewPickupPage() {
                                           <button
                                             key={tps.id}
                                             onClick={() => handleTPSSelect(tps.id, tps.latitude, tps.longitude, tps.address)}
-                                            className={`w-full text-left px-3 py-2 rounded-lg transition text-sm ${
-                                              isTPSSelected
-                                                ? 'bg-green-100 border-2 border-green-500'
-                                                : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
-                                            }`}
+                                            className={`w-full text-left px-3 py-2 rounded-lg transition text-sm ${isTPSSelected
+                                              ? 'bg-green-100 border-2 border-green-500'
+                                              : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
+                                              }`}
                                           >
                                             <p className={`font-medium ${isTPSSelected ? 'text-green-800' : 'text-gray-800'}`}>
                                               {tps.name}
