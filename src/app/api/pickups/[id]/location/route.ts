@@ -7,13 +7,13 @@ import { authOptions } from '@/lib/auth';
 // Fetches the driver's current location for a specific pickup request.
 export async function GET(
   req: Request,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
 
   const session = await getServerSession(authOptions);
-  // Unwrap params if it's a Promise (Next.js App Router)
-  const params = context?.params && typeof context.params.then === 'function' ? await context.params : context.params;
-  const pickupId = params?.id;
+  // Await params (Next.js 16 - params is always a Promise)
+  const params = await context.params;
+  const pickupId = params.id;
 
   if (!pickupId) {
     return NextResponse.json({ error: 'Invalid pickup id' }, { status: 400 });
@@ -61,13 +61,13 @@ export async function GET(
 // Updates the driver's location for a specific pickup request.
 export async function POST(
   req: Request,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
 
   const session = await getServerSession(authOptions);
-  // Unwrap params if it's a Promise (Next.js App Router)
-  const params = context?.params && typeof context.params.then === 'function' ? await context.params : context.params;
-  const pickupId = params?.id;
+  // Await params (Next.js 16 - params is always a Promise)
+  const params = await context.params;
+  const pickupId = params.id;
 
   if (!pickupId) {
     return NextResponse.json({ error: 'Invalid pickup id' }, { status: 400 });
@@ -94,17 +94,17 @@ export async function POST(
         { status: 400 }
       );
     }
-    
+
     // 4. Verify the pickup request exists and is assigned to this driver
     const pickupRequest = await prisma.pickupRequest.findFirst({
-        where: {
-            id: pickupId,
-            driverId: session.user.id,
-        }
+      where: {
+        id: pickupId,
+        driverId: session.user.id,
+      }
     });
 
     if (!pickupRequest) {
-        return NextResponse.json({ error: 'Pickup request not found or not assigned to you.' }, { status: 404 });
+      return NextResponse.json({ error: 'Pickup request not found or not assigned to you.' }, { status: 404 });
     }
 
     // 5. Use a transaction to update location and pickup status
