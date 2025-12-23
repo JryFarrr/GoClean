@@ -306,25 +306,60 @@ export default function NewPickupPage() {
     }
   }
 
-  // Fetch route from OpenRouteService Directions API (GeoJSON)
+  // Fetch route from OpenRouteService Directions API (GeoJSON) with OSRM fallback
   const fetchRoute = async (from: [number, number], to: [number, number]) => {
     try {
-      // Ganti dengan API key OpenRouteService kamu
+      // Try OpenRouteService first
       const ORS_API_KEY = process.env.NEXT_PUBLIC_ORS_API_KEY;
-      const url = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${ORS_API_KEY}&start=${from[1]},${from[0]}&end=${to[1]},${to[0]}`
-      const res = await fetch(url)
-      if (!res.ok) throw new Error('Gagal mengambil rute jalan')
-      const data = await res.json()
-      // Ambil geometry LineString GeoJSON
-      const geometry = data.features[0].geometry
+
+      if (ORS_API_KEY) {
+        try {
+          const url = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${ORS_API_KEY}&start=${from[1]},${from[0]}&end=${to[1]},${to[0]}`
+          const res = await fetch(url)
+
+          if (res.ok) {
+            const data = await res.json()
+            // Ambil geometry LineString GeoJSON
+            const geometry = data.features[0].geometry
+            setRouteGeoJson({
+              type: 'Feature',
+              geometry,
+              properties: {}
+            })
+            setFitRouteBoundsKey(prev => prev + 1) // trigger fitBounds setiap rute baru
+            console.log('Route fetched from OpenRouteService')
+            return
+          }
+        } catch (orsError) {
+          console.warn('OpenRouteService failed, falling back to OSRM:', orsError)
+        }
+      }
+
+      // Fallback to OSRM (Open Source Routing Machine) - Free, no API key needed
+      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${from[1]},${from[0]};${to[1]},${to[0]}?overview=full&geometries=geojson`
+      const osrmRes = await fetch(osrmUrl)
+
+      if (!osrmRes.ok) throw new Error('Gagal mengambil rute jalan')
+
+      const osrmData = await osrmRes.json()
+
+      if (osrmData.code !== 'Ok' || !osrmData.routes || osrmData.routes.length === 0) {
+        throw new Error('Rute tidak ditemukan')
+      }
+
+      // Ambil geometry dari OSRM response
+      const geometry = osrmData.routes[0].geometry
       setRouteGeoJson({
         type: 'Feature',
         geometry,
         properties: {}
       })
-      setFitRouteBoundsKey(prev => prev + 1) // trigger fitBounds setiap rute baru
+      setFitRouteBoundsKey(prev => prev + 1)
+      console.log('Route fetched from OSRM')
+
     } catch (err) {
-      toast.error('Gagal mengambil rute jalan')
+      console.error('Route fetching error:', err)
+      toast.error('Gagal mengambil rute jalan. Gunakan garis lurus sebagai panduan.')
       setRouteGeoJson(undefined)
     }
   }
