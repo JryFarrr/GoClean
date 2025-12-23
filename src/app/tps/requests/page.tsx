@@ -27,6 +27,7 @@ interface TPSLocationData {
 interface PickupRequest {
   id: string
   status: string
+  type: string // PICKUP or DROP_OFF
   address: string
   latitude: number
   longitude: number
@@ -109,14 +110,14 @@ export default function TPSRequestsPage() {
     try {
       const params = new URLSearchParams()
       if (filter) params.append('status', filter)
-      
+
       const res = await fetch(`/api/pickups?${params}`)
       const data = await res.json()
-      
+
       // Map pickup data to include selectedTPS if tpsId exists
       const mappedPickups = (data.data || []).map((pickup: any) => {
         let selectedTPS: TPSLocationData | null = null
-        
+
         if (pickup.tpsId && pickup.tps?.tpsProfile) {
           selectedTPS = {
             id: pickup.tps.id,
@@ -128,13 +129,13 @@ export default function TPSRequestsPage() {
             phone: pickup.tps.tpsProfile.phone
           }
         }
-        
+
         return {
           ...pickup,
           selectedTPS
         }
       })
-      
+
       setPickups(mappedPickups)
     } catch (error) {
       console.error('Error fetching pickups:', error)
@@ -149,7 +150,7 @@ export default function TPSRequestsPage() {
     const R = 6371 // Earth's radius in km
     const dLat = (lat2 - lat1) * Math.PI / 180
     const dLon = (lon2 - lon1) * Math.PI / 180
-    const a = 
+    const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
       Math.sin(dLon / 2) * Math.sin(dLon / 2)
@@ -190,8 +191,8 @@ export default function TPSRequestsPage() {
 
       toast.success(
         newStatus === 'ACCEPTED' ? 'Permintaan diterima!' :
-        newStatus === 'ON_THE_WAY' ? 'Status diperbarui!' :
-        'Status diperbarui!'
+          newStatus === 'ON_THE_WAY' ? 'Status diperbarui!' :
+            'Status diperbarui!'
       )
       fetchPickups()
     } catch (error) {
@@ -199,9 +200,7 @@ export default function TPSRequestsPage() {
     }
   }
 
-  const openGoogleMaps = (lat: number, lng: number) => {
-    window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank')
-  }
+
 
   if (authStatus === 'loading' || isLoading) {
     return (
@@ -219,7 +218,7 @@ export default function TPSRequestsPage() {
     <div className="max-w-6xl mx-auto px-4 py-8 bg-gradient-to-b from-green-50 to-white min-h-screen">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-green-800">Permintaan Penjemputan</h1>
+        <h1 className="text-3xl font-bold text-green-800">Permintaan</h1>
         <p className="text-green-700 mt-2">
           Kelola permintaan penjemputan sampah dari masyarakat
         </p>
@@ -238,11 +237,10 @@ export default function TPSRequestsPage() {
             <button
               key={tab.value}
               onClick={() => setFilter(tab.value)}
-              className={`px-4 py-2 rounded-full transition ${
-                filter === tab.value
-                  ? 'bg-green-600 text-white'
-                  : 'bg-green-50 text-green-700 hover:bg-green-100'
-              }`}
+              className={`px-4 py-2 rounded-full transition ${filter === tab.value
+                ? 'bg-green-600 text-white'
+                : 'bg-green-50 text-green-700 hover:bg-green-100'
+                }`}
             >
               {tab.label}
             </button>
@@ -285,6 +283,16 @@ export default function TPSRequestsPage() {
                 </span>
               </div>
 
+              {/* Service Type Badge */}
+              <div className="mb-4">
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${pickup.type === 'DROP_OFF'
+                    ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                    : 'bg-orange-100 text-orange-800 border border-orange-200'
+                  }`}>
+                  {pickup.type === 'DROP_OFF' ? '🚚 Antar ke TPS' : '🛵 Minta Jemput'}
+                </span>
+              </div>
+
               {/* Location */}
               <div className="flex items-start space-x-2 mb-4">
                 <MapPin size={18} className="text-green-500 mt-0.5 shrink-0" />
@@ -298,7 +306,7 @@ export default function TPSRequestsPage() {
               {(() => {
                 const nearestTPS = getNearestTPS(pickup.latitude, pickup.longitude)
                 const distance = nearestTPS ? calculateDistance(pickup.latitude, pickup.longitude, nearestTPS.latitude, nearestTPS.longitude) : 0
-                
+
                 return nearestTPS ? (
                   <div className="mb-4 p-3 bg-green-50 border border-green-300 rounded-lg">
                     <p className="text-sm font-semibold text-green-800 mb-2 flex items-center">
@@ -313,7 +321,7 @@ export default function TPSRequestsPage() {
                     {nearestTPS.operatingHours && (
                       <p className="text-xs text-green-600 mt-1">⏰ {nearestTPS.operatingHours}</p>
                     )}
-                    
+
                     {/* Show which TPS confirmed if status is not PENDING */}
                     {pickup.status !== 'PENDING' && pickup.tpsId && pickup.tps && (
                       <div className="mt-3 pt-3 border-t border-green-300">
@@ -340,11 +348,10 @@ export default function TPSRequestsPage() {
                     💰 Transaksi: <span className="font-semibold">Rp {pickup.transaction.totalPrice.toLocaleString('id-ID')}</span>
                   </p>
                   <div className="flex items-center gap-2">
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      pickup.transaction.isPaid
-                        ? 'bg-green-200 text-green-800'
-                        : 'bg-orange-200 text-orange-800'
-                    }`}>
+                    <span className={`text-xs px-2 py-1 rounded-full ${pickup.transaction.isPaid
+                      ? 'bg-green-200 text-green-800'
+                      : 'bg-orange-200 text-orange-800'
+                      }`}>
                       {pickup.transaction.isPaid ? '✓ Pembayaran Terverifikasi' : '⏳ Menunggu Verifikasi User'}
                     </span>
                   </div>
@@ -407,13 +414,7 @@ export default function TPSRequestsPage() {
                       <Truck size={18} className="mr-2" />
                       Berangkat Jemput
                     </button>
-                    <button
-                      onClick={() => openGoogleMaps(pickup.latitude, pickup.longitude)}
-                      className="flex items-center justify-center px-4 py-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition"
-                    >
-                      <MapPin size={18} className="mr-1" />
-                      Navigasi
-                    </button>
+
                     <button
                       onClick={() => handleStatusUpdate(pickup.id, 'PENDING')}
                       className="flex items-center justify-center px-4 py-2 bg-orange-100 text-orange-600 rounded-lg hover:bg-orange-200 transition"
@@ -433,12 +434,7 @@ export default function TPSRequestsPage() {
                       <Check size={18} className="mr-2" />
                       Sudah Sampai di Lokasi
                     </button>
-                    <button
-                      onClick={() => openGoogleMaps(pickup.latitude, pickup.longitude)}
-                      className="flex items-center justify-center px-4 py-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition"
-                    >
-                      <MapPin size={18} />
-                    </button>
+
                     <button
                       onClick={() => handleStatusUpdate(pickup.id, 'ACCEPTED')}
                       className="flex items-center justify-center px-4 py-2 bg-orange-100 text-orange-600 rounded-lg hover:bg-orange-200 transition"

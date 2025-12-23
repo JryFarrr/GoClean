@@ -89,6 +89,7 @@ model PickupRequest {
   
   // Request details
   description String?
+  type        String       @default("PICKUP") // PICKUP, DROP_OFF
   status      String       @default("PENDING") // PENDING, ACCEPTED, ON_THE_WAY, COMPLETED, CANCELLED
   scheduledAt DateTime?
   pickedUpAt  DateTime?

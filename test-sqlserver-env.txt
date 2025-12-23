@@ -1,0 +1,30 @@
+# COPY salah satu dari format berikut ke file .env Anda
+# Ganti DATABASE_URL yang lama dengan salah satu dari ini
+
+# ========================================
+# OPSI 1: Windows Authentication (RECOMMENDED untuk dev lokal)
+# ========================================
+DATABASE_URL="sqlserver://localhost\\SQLEXPRESS;database=goclean;integratedSecurity=true;trustServerCertificate=true"
+
+# ========================================
+# OPSI 2: Named Instance dengan SA (jika tau password)
+# ========================================
+DATABASE_URL="sqlserver://localhost\\SQLEXPRESS;database=goclean;user=sa;password=GantiPasswordIni123!;encrypt=true;trustServerCertificate=true"
+
+# ========================================
+# OPSI 3: Default Instance (port 1433)
+# ========================================
+DATABASE_URL="sqlserver://localhost:1433;database=goclean;user=sa;password=GantiPasswordIni123!;encrypt=true;trustServerCertificate=true"
+
+# ========================================
+# OPSI 4: Named Instance dengan format alternatif
+# ========================================
+DATABASE_URL="sqlserver://localhost;instance=SQLEXPRESS;database=goclean;integratedSecurity=true;trustServerCertificate=true"
+
+# ========================================
+# CATATAN PENTING:
+# ========================================
+# - Pastikan TIDAK ada spasi di awal/akhir
+# - Pastikan pakai DOUBLE backslash (\\) untuk named instance
+# - Untuk Windows Auth, pakai integratedSecurity=true (tidak perlu user/password)
+# - Ganti "GantiPasswordIni123!" dengan password SA Anda yang sebenarnya
