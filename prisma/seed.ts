@@ -393,6 +393,30 @@ async function main() {
   console.log('User 2: user2@goclean.id / user123')
   console.log('=====================\n')
 
+  // Create default settings
+  console.log('Creating default settings...')
+  const defaultSettings = [
+    { key: 'email_notifications', value: 'true', category: 'notification', description: 'Enable email notifications' },
+    { key: 'push_notifications', value: 'true', category: 'notification', description: 'Enable push notifications' },
+    { key: 'theme', value: 'light', category: 'appearance', description: 'Application theme' },
+    { key: 'primary_color', value: 'green', category: 'appearance', description: 'Primary color theme' },
+    { key: 'session_timeout', value: '30', category: 'security', description: 'Session timeout in days' },
+    { key: 'two_factor_auth', value: 'false', category: 'security', description: 'Enable two-factor authentication' },
+    { key: 'admin_secret_code', value: 'configured', category: 'security', description: 'Admin secret code status' },
+    { key: 'app_version', value: '1.0.0', category: 'system', description: 'Application version' },
+    { key: 'environment', value: 'development', category: 'system', description: 'Environment mode' },
+    { key: 'database_status', value: 'connected', category: 'system', description: 'Database connection status' }
+  ]
+
+  for (const setting of defaultSettings) {
+    await prisma.setting.upsert({
+      where: { key: setting.key },
+      update: setting,
+      create: setting
+    })
+  }
+  console.log('Created default settings')
+
   console.log('Seeding completed!')
 }
 
