@@ -5,9 +5,9 @@ import { useSession } from 'next-auth/react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { 
-  Loader2, 
-  ArrowLeft, 
+import {
+  Loader2,
+  ArrowLeft,
   MapPin,
   Phone,
   Calendar,
@@ -146,7 +146,7 @@ export default function PickupDetailUserPage() {
     try {
       const res = await fetch(`/api/pickups/${pickupId}`)
       const data = await res.json()
-      
+
       if (data.data) {
         setPickup(data.data)
       } else {
@@ -218,8 +218,8 @@ export default function PickupDetailUserPage() {
       id: 'driver',
       lat: driverLocation.lat,
       lng: driverLocation.lng,
-      title: 'Driver',
-      type: 'driver' as const,
+      title: '🚚 Driver',
+      type: 'user' as const, // Use 'user' type for driver marker
     })
   }
 
@@ -238,9 +238,9 @@ export default function PickupDetailUserPage() {
         </Link>
         <h1 className="text-3xl font-bold">Detail Penjemputan</h1>
         {showLiveTracking && (
-           <p className="text-lg text-green-600 font-semibold animate-pulse mt-2">
-             Driver sedang dalam perjalanan menuju lokasimu!
-           </p>
+          <p className="text-lg text-green-600 font-semibold animate-pulse mt-2">
+            Driver sedang dalam perjalanan menuju lokasimu!
+          </p>
         )}
       </div>
 
@@ -260,19 +260,17 @@ export default function PickupDetailUserPage() {
                 const isCompleted = index <= currentStepIndex
                 const isCurrent = index === currentStepIndex
                 const Icon = step.icon
-                
+
                 return (
                   <div key={step.key} className="flex flex-col items-center">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center z-10 ${
-                      isCompleted
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center z-10 ${isCompleted
                         ? 'bg-green-500 text-white'
                         : 'bg-gray-200 text-gray-400'
-                    } ${isCurrent ? 'ring-4 ring-green-200' : ''}`}>
+                      } ${isCurrent ? 'ring-4 ring-green-200' : ''}`}>
                       <Icon size={20} />
                     </div>
-                    <span className={`text-xs mt-2 text-center ${
-                      isCompleted ? 'text-green-600 font-medium' : 'text-gray-400'
-                    }`}>
+                    <span className={`text-xs mt-2 text-center ${isCompleted ? 'text-green-600 font-medium' : 'text-gray-400'
+                      }`}>
                       {step.label}
                     </span>
                   </div>
@@ -428,11 +426,10 @@ export default function PickupDetailUserPage() {
                 </div>
                 <div className="flex justify-between items-center pt-2 border-t">
                   <span className="text-gray-600">Status Pembayaran:</span>
-                  <span className={`px-3 py-1 rounded-full text-sm ${
-                    pickup.transaction.isPaid
+                  <span className={`px-3 py-1 rounded-full text-sm ${pickup.transaction.isPaid
                       ? 'bg-green-100 text-green-800'
                       : 'bg-yellow-100 text-yellow-800'
-                  }`}>
+                    }`}>
                     {pickup.transaction.isPaid ? 'Sudah Dibayar' : 'Belum Dibayar'}
                   </span>
                 </div>
@@ -447,7 +444,7 @@ export default function PickupDetailUserPage() {
                 <ImageIcon className="mr-2 text-green-600" size={20} />
                 Dokumentasi
               </h3>
-              
+
               {parseJsonArray(pickup.photos).length > 0 && (
                 <div className="mb-4">
                   <p className="text-sm text-gray-500 mb-2">Foto</p>
