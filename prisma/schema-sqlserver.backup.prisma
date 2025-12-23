@@ -89,7 +89,6 @@ model PickupRequest {
   
   // Request details
   description String?      @db.Text
-  type        String       @default("PICKUP") @db.VarChar(20) // PICKUP, DROP_OFF
   status      String       @default("PENDING") @db.VarChar(20) // PENDING, ACCEPTED, ON_THE_WAY, COMPLETED, CANCELLED
   scheduledAt DateTime?
   pickedUpAt  DateTime?
@@ -262,20 +261,4 @@ model Area {
 
   @@map("Area")
   @@index([kecamatanId])
-}
-
-// ============================================
-// 4. SYSTEM SETTINGS
-// ============================================
-model Setting {
-  id          String   @id @default(cuid())
-  key         String   @unique @db.VarChar(100)
-  value       String   @db.Text
-  description String?  @db.VarChar(255)
-  category    String   @db.VarChar(50) // 'system', 'notification', 'security', 'appearance'
-  isPublic    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("Setting")
 }

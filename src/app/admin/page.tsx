@@ -59,6 +59,13 @@ interface AdminStats {
     totalPrice: number
     createdAt: string
     user: { name: string }
+    pickupRequest?: {
+      tps?: { name: string }
+    }
+  }>
+  pickupByKecamatan: Array<{
+    kecamatan: string
+    _count: { kecamatan: number }
   }>
 }
 
@@ -87,7 +94,7 @@ export default function AdminDashboardPage() {
     
     // Check role only if authenticated
     if (authStatus === 'authenticated') {
-      if (session?.user?.role !== 'ADMIN') {
+      if (session?.user?.role?.toUpperCase() !== 'ADMIN') {
         setRedirected(true)
         toast.error('Akses ditolak. Halaman ini khusus untuk admin.')
         router.push('/dashboard')
@@ -136,7 +143,7 @@ export default function AdminDashboardPage() {
     )
   }
 
-  if (!session || session.user.role !== 'ADMIN') {
+  if (!session || session.user.role?.toUpperCase() !== 'ADMIN') {
     return null
   }
 
@@ -385,7 +392,7 @@ export default function AdminDashboardPage() {
         <div className="bg-white rounded-xl shadow-md p-6 border border-green-100">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-green-800">🚚 Penjemputan Terbaru</h2>
-            <Link href="/pickup" className="text-sm text-green-600 hover:underline">
+            <Link href="/pickup/history" className="text-sm text-green-600 hover:underline">
               Lihat Semua →
             </Link>
           </div>
