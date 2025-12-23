@@ -203,15 +203,21 @@ export default function PickupDetailUserPage() {
   const isCancelled = pickup.status === 'CANCELLED'
 
   // Prepare markers for the map
-  const mapMarkers = [
-    {
-      id: pickup.id,
-      lat: pickup.latitude,
-      lng: pickup.longitude,
-      title: 'Lokasi Anda',
-      type: 'pickup' as const,
-    },
-  ]
+  const mapMarkers: Array<{
+    id: string;
+    lat: number;
+    lng: number;
+    title: string;
+    type: 'pickup' | 'user';
+  }> = [
+      {
+        id: pickup.id,
+        lat: pickup.latitude,
+        lng: pickup.longitude,
+        title: 'Lokasi Anda',
+        type: 'pickup' as const,
+      },
+    ]
 
   if (driverLocation) {
     mapMarkers.push({
@@ -264,8 +270,8 @@ export default function PickupDetailUserPage() {
                 return (
                   <div key={step.key} className="flex flex-col items-center">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center z-10 ${isCompleted
-                        ? 'bg-green-500 text-white'
-                        : 'bg-gray-200 text-gray-400'
+                      ? 'bg-green-500 text-white'
+                      : 'bg-gray-200 text-gray-400'
                       } ${isCurrent ? 'ring-4 ring-green-200' : ''}`}>
                       <Icon size={20} />
                     </div>
@@ -427,8 +433,8 @@ export default function PickupDetailUserPage() {
                 <div className="flex justify-between items-center pt-2 border-t">
                   <span className="text-gray-600">Status Pembayaran:</span>
                   <span className={`px-3 py-1 rounded-full text-sm ${pickup.transaction.isPaid
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-yellow-100 text-yellow-800'
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-yellow-100 text-yellow-800'
                     }`}>
                     {pickup.transaction.isPaid ? 'Sudah Dibayar' : 'Belum Dibayar'}
                   </span>
