@@ -161,13 +161,58 @@ export default function MapComponent(props: MapComponentProps) {
 
       choroplethLayerRef.current = L.geoJSON(choroplethGeoJson, {
         style: (feature) => {
-          // IMPORTANT: Check the actual property name in the console log. It might not be 'KECAMATAN'.
-          const kecamatanNameRaw = feature?.properties.KECAMATAN || feature?.properties.kecamatan || feature?.properties.NM_KEC || feature?.properties.nama_kecamatan;
-          const kecamatanName = toTitleCase(kecamatanNameRaw);
-          const color = choroplethColors[kecamatanName] || '#E5E7EB'; // Default color
+          // Safety check for feature properties
+          if (!feature || !feature.properties) {
+            console.warn('Feature missing properties:', feature);
+            return {
+              fillColor: '#E5E7EB',
+              weight: 2,
+              opacity: 1,
+              color: 'white',
+              dashArray: '3',
+              fillOpacity: 0.4
+            };
+          }
+
+          // NEW: For kelurahan GeoJSON, map kd_kecamatan to kecamatan name
+          let kecamatanName: string;
+
+          if (feature.properties.kd_kecamatan) {
+            // Import dynamically to avoid issues
+            const kecamatanCodeMap: Record<string, string> = {
+              '001': 'Karang Pilang', '002': 'Wonocolo', '003': 'Rungkut',
+              '004': 'Gunung Anyar', '005': 'Sukolilo', '006': 'Mulyorejo',
+              '007': 'Gubeng', '008': 'Tegalsari', '009': 'Genteng',
+              '010': 'Bubutan', '011': 'Simokerto', '012': 'Pabean Cantian',
+              '013': 'Semampir', '014': 'Krembangan', '015': 'Kenjeran',
+              '016': 'Bulak', '017': 'Tambaksari', '018': 'Sawahan',
+              '019': 'Wonokromo', '020': 'Wiyung', '021': 'Jambangan',
+              '022': 'Gayungan', '023': 'Tenggilis Mejoyo', '024': 'Sukomanunggal',
+              '025': 'Tandes', '026': 'Asemrowo', '027': 'Lakarsantri',
+              '028': 'Benowo', '029': 'Pakal', '030': 'Sambikerep',
+              '031': 'Dukuh Pakis'
+            };
+
+            const kdKec = feature.properties.kd_kecamatan.padStart(3, '0');
+            kecamatanName = kecamatanCodeMap[kdKec] || 'Unknown';
+          } else {
+            // Fallback: Try multiple property names (support different GeoJSON formats)
+            const kecamatanNameRaw = feature.properties.KECAMATAN ||
+              feature.properties.kecamatan ||
+              feature.properties.NM_KEC ||
+              feature.properties.nm_kelurahan ||
+              feature.properties.nama_kecamatan ||
+              feature.properties.NAMOBJ ||
+              feature.properties.name ||
+              'Unknown';
+
+            kecamatanName = toTitleCase(kecamatanNameRaw);
+          }
+
+          const color = choroplethColors[kecamatanName] || '#E5E7EB'; // Default gray
 
           if (!choroplethColors[kecamatanName]) {
-            console.warn(`No color found for kecamatan: "${kecamatanName}" (Raw: "${kecamatanNameRaw}"). Using default.`);
+            console.warn(`No color found for kecamatan: "${kecamatanName}" (kd_kecamatan: "${feature.properties.kd_kecamatan}"). Using default.`);
           }
 
           return {
@@ -180,9 +225,22 @@ export default function MapComponent(props: MapComponentProps) {
           };
         },
         onEachFeature: (feature, layer) => {
-          const kecamatanNameRaw = feature?.properties.KECAMATAN || feature?.properties.kecamatan || feature?.properties.NM_KEC || feature?.properties.nama_kecamatan;
-          const kecamatanName = toTitleCase(kecamatanNameRaw);
+          // Safety check
+          if (!feature || !feature.properties) {
+            return;
+          }
+
+          const kecamatanNameRaw = feature.properties.KECAMATAN ||
+            feature.properties.kecamatan ||
+            feature.properties.NM_KEC ||
+            feature.properties.nama_kecamatan ||
+            feature.properties.NAMOBJ ||
+            feature.properties.name ||
+            'Unknown';
+
+          const kecamatanName = toTitleCase(kecamatanNameRaw || 'Unknown');
           const transaksiCount = choroplethTransaksi ? choroplethTransaksi[kecamatanName] || 0 : 0;
+
           layer.bindTooltip(
             `<b>${kecamatanName}</b><br>${transaksiCount} transaksi`,
             { permanent: false, direction: 'center', className: 'kecamatan-tooltip' }
@@ -959,8 +1017,8 @@ export default function MapComponent(props: MapComponentProps) {
                   setFilteredMarkers([])
                 }}
                 className={`px-3 py-1 rounded-lg text-xs font-medium transition ${searchType === 'name'
-                    ? 'bg-green-500 text-white'
-                    : 'bg-white text-gray-700 border border-gray-300'
+                  ? 'bg-green-500 text-white'
+                  : 'bg-white text-gray-700 border border-gray-300'
                   }`}
               >
                 Nama TPS
@@ -976,8 +1034,8 @@ export default function MapComponent(props: MapComponentProps) {
                   setFilteredMarkers([])
                 }}
                 className={`px-3 py-1 rounded-lg text-xs font-medium transition ${searchType === 'radius'
-                    ? 'bg-green-500 text-white'
-                    : 'bg-white text-gray-700 border border-gray-300'
+                  ? 'bg-green-500 text-white'
+                  : 'bg-white text-gray-700 border border-gray-300'
                   }`}
               >
                 Radius
@@ -1086,8 +1144,8 @@ export default function MapComponent(props: MapComponentProps) {
                                   }
                                 }}
                                 className={`w-full text-left p-2 rounded-lg transition text-xs ${marker.id === selectedTPSId
-                                    ? 'bg-red-100 border border-red-300'
-                                    : 'bg-green-50 hover:bg-green-100'
+                                  ? 'bg-red-100 border border-red-300'
+                                  : 'bg-green-50 hover:bg-green-100'
                                   }`}
                               >
                                 <div className="flex items-start justify-between">
@@ -1181,8 +1239,8 @@ export default function MapComponent(props: MapComponentProps) {
                                 }
                               }}
                               className={`w-full text-left px-3 py-2 rounded-lg transition text-xs ${tps.id === selectedTPSId
-                                  ? 'bg-red-100 border border-red-300'
-                                  : 'bg-green-50 hover:bg-green-100'
+                                ? 'bg-red-100 border border-red-300'
+                                : 'bg-green-50 hover:bg-green-100'
                                 }`}
                             >
                               <div className="flex items-start space-x-2">

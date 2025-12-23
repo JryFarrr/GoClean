@@ -12,7 +12,7 @@ import MediaUploader from '@/components/MediaUploader';
 import WasteItemSelector from '@/components/WasteItemSelector';
 import { useLocationStore } from '@/lib/store';
 import { SURABAYA_KECAMATAN } from '@/lib/surabayaKecamatan';
-import surabayaGeoJson from '../../../../public/KOTA_SURABAYA.json';
+import surabayaGeoJson from '../../../../public/35.78_kelurahan.json';
 
 
 interface TPSLocation {
@@ -766,12 +766,12 @@ export default function NewPickupPage() {
                     choroplethTransaksi={orderType === 'jemput' ? transaksiPerKecamatan : undefined}
 
                     // TPS Polygon props
-                    tpsPolygons={orderType === 'jemput' && showTPSPolygons ? tpsPolygons : []}
-                    showTPSPolygons={orderType === 'jemput' && showTPSPolygons}
+                    tpsPolygons={orderType === 'tps' && showTPSPolygons ? tpsPolygons : []}
+                    showTPSPolygons={orderType === 'tps' && showTPSPolygons}
                   />
 
                   {/* Toggle for TPS Polygons */}
-                  {orderType === 'jemput' && tpsPolygons.length > 0 && (
+                  {orderType === 'tps' && tpsPolygons.length > 0 && (
                     <div className="absolute top-4 left-4 bg-white/95 rounded-lg shadow-lg border border-orange-200 p-3 z-50">
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
