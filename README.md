@@ -1142,3 +1142,15 @@ Jika ada pertanyaan atau bug:
 ---
 
 **GoClean** - Solusi Modern untuk Manajemen Sampah 🌿♻️
+<<<<<<< HEAD
+
+halo
+
+<<<<<<< HEAD
+adifa cantik'
+Oke
+
+
+HALO AKU LINTANG 
+ 56ccf69a57d6044ae63e54a1a40f8ac90edb5734
+ 0bfb1c8b56a709ff86fe345a62f31370437e3d1d
