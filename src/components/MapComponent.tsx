@@ -119,12 +119,73 @@ export default function MapComponent(props: MapComponentProps) {
     }
   }, [fitRouteBoundsKey]);
 
+  // Choropleth Layer Effect
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    // Remove previous choropleth layer
+    if (choroplethLayerRef.current) {
+      mapRef.current.removeLayer(choroplethLayerRef.current);
+    }
+
+    if (choroplethGeoJson && choroplethColors) {
+      console.log('Choropleth data received:', { choroplethGeoJson, choroplethColors, choroplethTransaksi });
+
+      const toTitleCase = (str: string) => {
+        if (!str) return '';
+        return str.replace(
+          /\w\S*/g,
+          (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
+        );
+      };
+
+      // Log first feature's properties to check key names
+      if (choroplethGeoJson.features && choroplethGeoJson.features.length > 0) {
+        console.log('Inspecting first GeoJSON feature properties:', choroplethGeoJson.features[0].properties);
+      }
+
+      choroplethLayerRef.current = L.geoJSON(choroplethGeoJson, {
+        style: (feature) => {
+          // IMPORTANT: Check the actual property name in the console log. It might not be 'KECAMATAN'.
+          const kecamatanNameRaw = feature?.properties.KECAMATAN || feature?.properties.kecamatan || feature?.properties.NM_KEC || feature?.properties.nama_kecamatan;
+          const kecamatanName = toTitleCase(kecamatanNameRaw);
+          const color = choroplethColors[kecamatanName] || '#E5E7EB'; // Default color
+
+          if (!choroplethColors[kecamatanName]) {
+            console.warn(`No color found for kecamatan: "${kecamatanName}" (Raw: "${kecamatanNameRaw}"). Using default.`);
+          }
+          
+          return {
+            fillColor: color,
+            weight: 2,
+            opacity: 1,
+            color: 'white',
+            dashArray: '3',
+            fillOpacity: 0.7
+          };
+        },
+        onEachFeature: (feature, layer) => {
+          const kecamatanNameRaw = feature?.properties.KECAMATAN || feature?.properties.kecamatan || feature?.properties.NM_KEC || feature?.properties.nama_kecamatan;
+          const kecamatanName = toTitleCase(kecamatanNameRaw);
+          const transaksiCount = choroplethTransaksi ? choroplethTransaksi[kecamatanName] || 0 : 0;
+          layer.bindTooltip(
+            `<b>${kecamatanName}</b><br>${transaksiCount} transaksi`,
+            { permanent: false, direction: 'center', className: 'kecamatan-tooltip' }
+          );
+        }
+      }).addTo(mapRef.current);
+    } else {
+        console.log('Choropleth props not available. Skipping layer.', { choroplethGeoJson, choroplethColors });
+    }
+  }, [choroplethGeoJson, choroplethColors, choroplethTransaksi]);
+
   // Custom icons
   const createIcon = (type: string, status?: string, isHighlighted?: boolean) => {
     const colors = {
       user: '#3B82F6',
       tps: '#10B981',
       pickup: '#F59E0B',
+      driver: '#8B5CF6', // New color for driver
       selected: '#EF4444',
       highlighted: '#DC2626', // Merah terang untuk highlight
       PENDING: '#F59E0B',
@@ -142,6 +203,13 @@ export default function MapComponent(props: MapComponentProps) {
     const size = isHighlighted ? 48 : 32
     const pulse = isHighlighted ? 'animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;' : ''
     
+    const iconContent = {
+      tps: '🏭',
+      user: '👤',
+      driver: '🚚', // New icon for driver
+      pickup: '📍'
+    }
+
     return L.divIcon({
       className: 'custom-marker',
       html: `
@@ -172,7 +240,7 @@ export default function MapComponent(props: MapComponentProps) {
             height: 100%;
             font-weight: bold;
           ">
-            ${type === 'tps' ? '🏭' : type === 'user' ? '👤' : '📍'}
+            ${iconContent[type as keyof typeof iconContent] || '📍'}
           </div>
         </div>
       `,

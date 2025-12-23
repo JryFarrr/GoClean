@@ -91,6 +91,7 @@ export default function PickupDetailUserPage() {
   const [pickup, setPickup] = useState<PickupDetail | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isCancelling, setIsCancelling] = useState(false)
+  const [driverLocation, setDriverLocation] = useState<{ lat: number, lng: number } | null>(null)
 
   useEffect(() => {
     if (authStatus === 'unauthenticated') {
@@ -103,6 +104,43 @@ export default function PickupDetailUserPage() {
       fetchPickupDetail()
     }
   }, [session, pickupId])
+
+  // Effect for live tracking
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout | null = null
+
+    const fetchDriverLocation = async () => {
+      if (!pickupId) return
+      try {
+        const res = await fetch(`/api/pickups/${pickupId}/location`)
+        if (res.ok) {
+          const data = await res.json()
+          setDriverLocation({ lat: data.latitude, lng: data.longitude })
+        } else {
+          // If the endpoint returns 404, it just means the driver hasn't started moving.
+          // We can clear the location if it was previously set.
+          if (res.status === 404) {
+            setDriverLocation(null)
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching driver location:', error)
+      }
+    }
+
+    if (pickup?.status === 'ON_THE_WAY') {
+      // Fetch immediately and then set an interval
+      fetchDriverLocation()
+      intervalId = setInterval(fetchDriverLocation, 8000) // Poll every 8 seconds
+    }
+
+    // Cleanup function
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId)
+      }
+    }
+  }, [pickup?.status, pickupId])
 
   const fetchPickupDetail = async () => {
     try {
@@ -164,6 +202,29 @@ export default function PickupDetailUserPage() {
   const currentStepIndex = STATUS_STEPS.findIndex(s => s.key === pickup.status)
   const isCancelled = pickup.status === 'CANCELLED'
 
+  // Prepare markers for the map
+  const mapMarkers = [
+    {
+      id: pickup.id,
+      lat: pickup.latitude,
+      lng: pickup.longitude,
+      title: 'Lokasi Anda',
+      type: 'pickup' as const,
+    },
+  ]
+
+  if (driverLocation) {
+    mapMarkers.push({
+      id: 'driver',
+      lat: driverLocation.lat,
+      lng: driverLocation.lng,
+      title: 'Driver',
+      type: 'driver' as const,
+    })
+  }
+
+  const showLiveTracking = pickup.status === 'ON_THE_WAY' && driverLocation
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       {/* Header */}
@@ -176,6 +237,11 @@ export default function PickupDetailUserPage() {
           Kembali ke Riwayat
         </Link>
         <h1 className="text-3xl font-bold">Detail Penjemputan</h1>
+        {showLiveTracking && (
+           <p className="text-lg text-green-600 font-semibold animate-pulse mt-2">
+             Driver sedang dalam perjalanan menuju lokasimu!
+           </p>
+        )}
       </div>
 
       {/* Status Progress */}
@@ -237,20 +303,14 @@ export default function PickupDetailUserPage() {
           <div className="bg-white rounded-xl shadow-md p-6">
             <h3 className="font-semibold text-lg mb-4 flex items-center">
               <MapPin className="mr-2 text-green-600" size={20} />
-              Lokasi Penjemputan
+              {showLiveTracking ? 'Lacak Lokasi Driver' : 'Lokasi Penjemputan'}
             </h3>
             <p className="text-gray-700 mb-4">{pickup.address}</p>
-            <div className="h-48 rounded-lg overflow-hidden">
+            <div className="h-64 rounded-lg overflow-hidden">
               <MapComponent
                 center={[pickup.latitude, pickup.longitude]}
                 zoom={15}
-                markers={[{
-                  id: pickup.id,
-                  lat: pickup.latitude,
-                  lng: pickup.longitude,
-                  title: pickup.address,
-                  type: 'pickup'
-                }]}
+                markers={mapMarkers}
               />
             </div>
           </div>

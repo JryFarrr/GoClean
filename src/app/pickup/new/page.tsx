@@ -12,6 +12,7 @@ import MediaUploader from '@/components/MediaUploader';
 import WasteItemSelector from '@/components/WasteItemSelector';
 import { useLocationStore } from '@/lib/store';
 import { SURABAYA_KECAMATAN } from '@/lib/surabayaKecamatan';
+import surabayaGeoJson from '../../../../public/KOTA_SURABAYA.json';
 
 
 interface TPSLocation {
@@ -43,26 +44,95 @@ const MapComponent = dynamic(() => import('@/components/MapComponent'), {
 })
 
 export default function NewPickupPage() {
+  const [step, setStep] = useState(0);
+  const [orderType, setOrderType] = useState<'antar' | 'jemput' | null>(null);
+
   // Choropleth feature states
   const [kecamatanGeoJson, setKecamatanGeoJson] = useState<FeatureCollection | null>(null);
   const [transaksiPerKecamatan, setTransaksiPerKecamatan] = useState<Record<string, number>>({});
   const [choroplethColors, setChoroplethColors] = useState<Record<string, string>>({});
 
-  // Helper function to get color based on value
-  function getColor(value: number): string {
-    // Example: green for low, yellow for medium, red for high
-    if (value < 10) return '#bbf7d0'; // light green
-    if (value < 50) return '#fde68a'; // yellow
-    return '#ef4444'; // red
-  }
+  // Helper function to convert string to Title Case
+  const toTitleCase = (str: string) => {
+    if (!str) return '';
+    return str.replace(
+      /\w\S*/g,
+      (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
+    );
+  };
 
   useEffect(() => {
-    const colors: Record<string, string> = {};
-    for (const k in transaksiPerKecamatan) {
-      colors[k] = getColor(transaksiPerKecamatan[k]);
+    const loadChoroplethData = async () => {
+      // 1. Set GeoJSON from direct import
+      setKecamatanGeoJson(surabayaGeoJson as FeatureCollection);
+
+      // 2. Fetch stats for choropleth, but don't let it break the map
+      try {
+          const statsRes = await fetch('/api/pickups/stats/by-kecamatan');
+          if (!statsRes.ok) {
+            // Don't throw, just log and exit gracefully
+            console.warn('Gagal memuat data statistik untuk choropleth');
+            toast.error('Gagal memuat statistik warna peta');
+            return;
+          }
+
+          const statsData = await statsRes.json();
+          console.log("Fetched Stats:", statsData);
+
+          // 3. Process stats data
+          let transaksiData: Record<string, number> = {};
+          if (statsData.pickupByKecamatan) {
+            transaksiData = statsData.pickupByKecamatan.reduce((acc: any, item: any) => {
+              if (item.kecamatan) { // Ensure kecamatan is not null/undefined
+                const kecamatanName = toTitleCase(item.kecamatan);
+                acc[kecamatanName] = item._count.kecamatan;
+              }
+              return acc;
+            }, {});
+          }
+          console.log("Processed Transaksi Data:", transaksiData);
+
+          // 4. Generate colors from the processed data
+          const values = Object.values(transaksiData);
+          if (values.length === 0) {
+            console.log("No transaction data found, using default colors.");
+            setTransaksiPerKecamatan({});
+            setChoroplethColors({});
+            return;
+          }
+
+          const minValue = Math.min(...values);
+          const maxValue = Math.max(...values);
+          const startColor = [187, 247, 208]; // green-200
+          const endColor = [22, 101, 52];     // green-900
+
+          const newColors: Record<string, string> = {};
+          for (const kecamatan in transaksiData) {
+            const value = transaksiData[kecamatan];
+            const ratio = maxValue > minValue ? (value - minValue) / (maxValue - minValue) : 1;
+            
+            const r = Math.round(startColor[0] + ratio * (endColor[0] - startColor[0]));
+            const g = Math.round(startColor[1] + ratio * (endColor[1] - startColor[1]));
+            const b = Math.round(startColor[2] + ratio * (endColor[2] - startColor[2]));
+            
+            newColors[kecamatan] = `rgb(${r}, ${g}, ${b})`;
+          }
+          console.log("Generated Colors:", newColors);
+
+          // 5. Set the color states
+          setTransaksiPerKecamatan(transaksiData);
+          setChoroplethColors(newColors);
+
+      } catch (statsError) {
+           console.error('Error loading stats for choropleth:', statsError);
+           toast.error('Gagal memuat statistik warna peta');
+      }
+    };
+
+    if (orderType === 'jemput') {
+      loadChoroplethData();
     }
-    setChoroplethColors(colors);
-  }, [kecamatanGeoJson, transaksiPerKecamatan]);
+  }, [orderType]);
   
   // GeoJSON route state (for antar)
   const [routeGeoJson, setRouteGeoJson] = useState<any>(undefined)
@@ -73,10 +143,6 @@ export default function NewPickupPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const { latitude, longitude, address, setLocation } = useLocationStore()
-
-  // Step 0: antar/jemput selection
-  const [step, setStep] = useState(0)
-  const [orderType, setOrderType] = useState<'antar' | 'jemput' | null>(null)
 
   const [files, setFiles] = useState<File[]>([])
   const [wasteItems, setWasteItems] = useState<WasteItem[]>([])

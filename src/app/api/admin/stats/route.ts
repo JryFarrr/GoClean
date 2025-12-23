@@ -7,7 +7,7 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions)
     
-    if (!session?.user || session.user.role !== 'ADMIN') {
+    if (!session?.user || (session.user.role !== 'ADMIN' && session.user.role !== 'JEMPUT')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -22,7 +22,8 @@ export async function GET() {
       recentPickups,
       recentTransactions,
       wasteStats,
-      wasteByTPS
+      wasteByTPS,
+      pickupByKecamatan,
     ] = await Promise.all([
       prisma.user.count({ where: { role: 'USER' } }),
       prisma.user.count({ where: { role: 'TPS' } }),
@@ -91,7 +92,18 @@ export async function GET() {
             }
           }
         }
-      })
+      }),
+      prisma.pickupRequest.groupBy({
+        by: ['kecamatan'],
+        _count: {
+          kecamatan: true,
+        },
+        where: {
+          kecamatan: {
+            not: null,
+          },
+        },
+      }),
     ])
 
     // Process waste by TPS
@@ -149,7 +161,8 @@ export async function GET() {
       })),
       wasteByTPS: wasteByTPSArray,
       recentPickups,
-      recentTransactions
+      recentTransactions,
+      pickupByKecamatan,
     })
   } catch (error) {
     console.error('Admin stats error:', error)

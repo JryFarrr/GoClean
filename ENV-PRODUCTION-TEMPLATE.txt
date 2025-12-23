@@ -1,0 +1,26 @@
+# ===================================
+# PRODUCTION ENVIRONMENT - TiDB Cloud
+# ===================================
+
+# Database Configuration (TiDB Cloud - MySQL Compatible)
+DATABASE_URL="mysql://user:password@gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/goclean?ssl={\"rejectUnauthorized\":true}"
+
+# NextAuth Configuration
+NEXTAUTH_SECRET="your-production-secret-key-min-32-characters"
+NEXTAUTH_URL="https://your-app.vercel.app"
+
+# Admin Secret Code
+ADMIN_SECRET_CODE="GOCLEAN2025"
+
+# Upload Directory
+UPLOAD_DIR="./public/uploads"
+
+# ===================================
+# TiDB Cloud Setup Instructions:
+# ===================================
+# 1. Sign up at https://tidbcloud.com (FREE!)
+# 2. Create a Serverless Tier cluster (5GB free forever)
+# 3. Go to "Connect" and copy the connection string
+# 4. Replace the DATABASE_URL above
+# 5. Set these values in Vercel Environment Variables
+# ===================================
