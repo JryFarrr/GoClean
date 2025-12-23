@@ -547,7 +547,7 @@ export default function MapComponent(props: MapComponentProps) {
     // Add new markers
     markers.forEach((marker) => {
       // Check if this marker should be highlighted
-      const isHighlighted = highlightedMarkerId && marker.id === highlightedMarkerId
+      const isHighlighted = !!(highlightedMarkerId && marker.id === highlightedMarkerId)
       // Gunakan warna merah jika TPS ini dipilih
       const isSelected = marker.id === selectedTPSId
       const iconType = isSelected ? 'selected' : (marker.type || 'pickup')
