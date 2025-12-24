@@ -90,6 +90,7 @@ model PickupRequest {
   // Request details
   description String?      @db.Text
   status      String       @default("PENDING") @db.VarChar(20) // PENDING, ACCEPTED, ON_THE_WAY, COMPLETED, CANCELLED
+  type        String       @default("PICKUP") @db.VarChar(20) // PICKUP, DROP_OFF
   scheduledAt DateTime?
   pickedUpAt  DateTime?
   
