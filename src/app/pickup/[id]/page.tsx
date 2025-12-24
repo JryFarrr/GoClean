@@ -33,6 +33,7 @@ const MapComponent = dynamic(() => import('@/components/MapComponent'), {
 interface PickupDetail {
   id: string
   status: string
+  type: string // PICKUP or DROP_OFF
   address: string
   latitude: number
   longitude: number
@@ -242,7 +243,9 @@ export default function PickupDetailUserPage() {
           <ArrowLeft size={20} className="mr-2" />
           Kembali ke Riwayat
         </Link>
-        <h1 className="text-3xl font-bold">Detail Penjemputan</h1>
+        <h1 className="text-3xl font-bold">
+          {pickup.type === 'DROP_OFF' ? 'Detail Pengantaran' : 'Detail Penjemputan'}
+        </h1>
         {showLiveTracking && (
           <p className="text-lg text-green-600 font-semibold animate-pulse mt-2">
             Driver sedang dalam perjalanan menuju lokasimu!
@@ -253,7 +256,9 @@ export default function PickupDetailUserPage() {
       {/* Status Progress */}
       {!isCancelled && (
         <div className="bg-white rounded-xl shadow-md p-6 mb-8">
-          <h3 className="font-semibold text-lg mb-6">Status Penjemputan</h3>
+          <h3 className="font-semibold text-lg mb-6">
+            {pickup.type === 'DROP_OFF' ? 'Status Pengantaran' : 'Status Penjemputan'}
+          </h3>
           <div className="relative">
             <div className="absolute top-5 left-0 right-0 h-1 bg-gray-200 rounded">
               <div
@@ -294,7 +299,12 @@ export default function PickupDetailUserPage() {
             <XCircle className="text-red-500" size={24} />
             <div>
               <p className="font-semibold text-red-800">Permintaan Dibatalkan</p>
-              <p className="text-sm text-red-600">Permintaan penjemputan ini telah dibatalkan</p>
+              <p className="text-sm text-red-600">
+                {pickup.type === 'DROP_OFF'
+                  ? 'Permintaan pengantaran ini telah dibatalkan'
+                  : 'Permintaan penjemputan ini telah dibatalkan'
+                }
+              </p>
             </div>
           </div>
         </div>
@@ -307,7 +317,12 @@ export default function PickupDetailUserPage() {
           <div className="bg-white rounded-xl shadow-md p-6">
             <h3 className="font-semibold text-lg mb-4 flex items-center">
               <MapPin className="mr-2 text-green-600" size={20} />
-              {showLiveTracking ? 'Lacak Lokasi Driver' : 'Lokasi Penjemputan'}
+              {showLiveTracking
+                ? 'Lacak Lokasi Driver'
+                : pickup.type === 'DROP_OFF'
+                  ? 'Lokasi Pengantaran'
+                  : 'Lokasi Penjemputan'
+              }
             </h3>
             <p className="text-gray-700 mb-4">{pickup.address}</p>
             <div className="h-64 rounded-lg overflow-hidden">
@@ -340,7 +355,9 @@ export default function PickupDetailUserPage() {
               </div>
               {pickup.scheduledAt && (
                 <div>
-                  <p className="text-sm text-gray-500">Jadwal Penjemputan</p>
+                  <p className="text-sm text-gray-500">
+                    {pickup.type === 'DROP_OFF' ? 'Jadwal Pengantaran' : 'Jadwal Penjemputan'}
+                  </p>
                   <p className="font-medium">
                     {new Date(pickup.scheduledAt).toLocaleDateString('id-ID', {
                       day: 'numeric',
@@ -360,7 +377,7 @@ export default function PickupDetailUserPage() {
             <div className="bg-white rounded-xl shadow-md p-6">
               <h3 className="font-semibold text-lg mb-4 flex items-center">
                 <Building2 className="mr-2 text-green-600" size={20} />
-                TPS Penjemput
+                {pickup.type === 'DROP_OFF' ? 'TPS Tujuan' : 'TPS Penjemput'}
               </h3>
               <p className="font-medium text-gray-800">
                 {pickup.tps.tpsProfile?.tpsName || pickup.tps.name}

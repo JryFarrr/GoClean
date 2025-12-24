@@ -6,7 +6,7 @@ import prisma from '@/lib/prisma'
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session?.user || session.user.role !== 'TPS') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     // Get pickup request
     const pickupRequest = await prisma.pickupRequest.findUnique({
       where: { id: pickupRequestId },
-      include: { 
+      include: {
         wasteItems: true,
         user: {
           select: {
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -171,7 +171,7 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -179,7 +179,7 @@ export async function PATCH(req: NextRequest) {
     const body = await req.json()
     const { transactionId, isPaid } = body
 
-    console.log('PATCH request received:', { transactionId, isPaid, userId: session.user.id })
+    console.log('PATCH request received:', { transactionId, isPaid, userId: session.user.id, userRole: session.user.role })
 
     // Get transaction
     const transaction = await prisma.transaction.findUnique({
@@ -196,19 +196,22 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Transaksi tidak ditemukan' }, { status: 404 })
     }
 
-    console.log('Transaction userId:', transaction.userId, 'Session userId:', session.user.id)
+    // Authorization check: Either TPS who handled the pickup, or the USER who owns the transaction
+    const isTPS = session.user.role === 'TPS' && transaction.pickupRequest.tpsId === session.user.id
+    const isOwner = transaction.userId === session.user.id
 
-    // Only user can confirm payment received
-    if (transaction.userId !== session.user.id) {
-      return NextResponse.json({ error: 'Unauthorized - Bukan pemilik transaksi' }, { status: 403 })
+    console.log('Authorization check:', { isTPS, isOwner, tpsId: transaction.pickupRequest.tpsId, sessionUserId: session.user.id })
+
+    if (!isTPS && !isOwner) {
+      return NextResponse.json({ error: 'Unauthorized - Anda tidak memiliki akses ke transaksi ini' }, { status: 403 })
     }
 
     console.log('Starting transaction update...')
 
-    // Update transaction to paid AND pickup status to COMPLETED
+    // Update transaction to paid
     const updatedTransaction = await prisma.transaction.update({
       where: { id: transactionId },
-      data: { 
+      data: {
         isPaid: true,
         paidAt: new Date()
       },
@@ -232,31 +235,35 @@ export async function PATCH(req: NextRequest) {
 
     console.log('Pickup request updated to COMPLETED')
 
-    // Create notification for TPS
-    if (transaction.pickupRequest.tpsId) {
+    // Create appropriate notifications based on who marked it as paid
+    if (isTPS) {
+      // TPS marked as paid - notify the user to check their account
       await prisma.notification.create({
         data: {
-          userId: transaction.pickupRequest.tpsId,
-          title: '✅ Pembayaran Dikonfirmasi',
-          message: `${transaction.user.name} telah mengonfirmasi penerimaan pembayaran sebesar Rp ${transaction.totalPrice.toLocaleString('id-ID')}. Transaksi telah selesai dengan sukses.`,
-          type: 'payment_confirmed'
+          userId: transaction.userId,
+          title: '💰 Pembayaran Telah Ditransfer',
+          message: `TPS telah mentransfer pembayaran sebesar Rp ${transaction.totalPrice.toLocaleString('id-ID')} ke nomor Gopay Anda. Silakan cek mutasi rekening Anda. Terima kasih telah menggunakan layanan GoClean!`,
+          type: 'payment_sent'
         }
       })
-      console.log('Notification created for TPS')
+      console.log('Notification created for USER')
+    } else {
+      // USER confirmed payment - notify TPS
+      if (transaction.pickupRequest.tpsId) {
+        await prisma.notification.create({
+          data: {
+            userId: transaction.pickupRequest.tpsId,
+            title: '✅ Pembayaran Dikonfirmasi',
+            message: `${transaction.user.name} telah mengonfirmasi penerimaan pembayaran sebesar Rp ${transaction.totalPrice.toLocaleString('id-ID')}. Transaksi telah selesai dengan sukses.`,
+            type: 'payment_confirmed'
+          }
+        })
+        console.log('Notification created for TPS')
+      }
     }
 
-    // Create notification for user confirming successful transaction completion
-    await prisma.notification.create({
-      data: {
-        userId: transaction.userId,
-        title: '✅ Transaksi Selesai',
-        message: `Selamat ${transaction.user.name}, pembayaran sebesar Rp ${transaction.totalPrice.toLocaleString('id-ID')} telah dikonfirmasi. Terima kasih telah menggunakan layanan GoClean!`,
-        type: 'transaction_completed'
-      }
-    })
-
     return NextResponse.json({
-      message: 'Pembayaran berhasil dikonfirmasi',
+      message: isTPS ? 'Transaksi berhasil ditandai lunas' : 'Pembayaran berhasil dikonfirmasi',
       data: updatedTransaction
     })
   } catch (error) {

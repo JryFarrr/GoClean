@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
     const wasteItems = JSON.parse(formData.get('wasteItems') as string)
     const scheduledAt = formData.get('scheduledAt') as string
     const tpsId = formData.get('tpsId') as string
+    const type = (formData.get('type') as string) || 'PICKUP' // Default to PICKUP if not provided
 
     // Handle file uploads
     const photos: string[] = []
@@ -56,6 +57,7 @@ export async function POST(req: NextRequest) {
       data: {
         userId: session.user.id,
         tpsId: tpsId || null,
+        type, // Add type field (DROP_OFF or PICKUP)
         latitude,
         longitude,
         address,

@@ -516,6 +516,10 @@ export default function NewPickupPage() {
       formData.append('description', description)
       formData.append('wasteItems', JSON.stringify(wasteItems))
 
+      // Map orderType to database type field
+      const requestType = orderType === 'antar' ? 'DROP_OFF' : 'PICKUP'
+      formData.append('type', requestType)
+
       // Append TPS ID if user selected a TPS
       if (selectedTPS?.id) {
         formData.append('tpsId', selectedTPS.id)

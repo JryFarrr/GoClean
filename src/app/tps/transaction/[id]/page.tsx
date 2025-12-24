@@ -5,9 +5,9 @@ import { useSession } from 'next-auth/react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { 
-  Loader2, 
-  ArrowLeft, 
+import {
+  Loader2,
+  ArrowLeft,
   MapPin,
   Phone,
   Calendar,
@@ -130,13 +130,13 @@ export default function TransactionInputPage() {
   const fetchPickupDetail = async () => {
     try {
       const res = await fetch(`/api/pickups/${pickupId}`)
-      
+
       if (!res.ok) {
         throw new Error(`Failed to fetch: ${res.status}`)
       }
-      
+
       const data = await res.json()
-      
+
       if (data.data) {
         setPickup(data.data)
         // Initialize weight inputs
@@ -295,12 +295,12 @@ export default function TransactionInputPage() {
             <DollarSign className="mr-2 text-blue-600" size={24} />
             Informasi Pembayaran
           </h3>
-          
+
           <div className="bg-white rounded-lg p-4 mb-4">
             <p className="text-sm text-gray-600 mb-3">
               💡 Setelah membuat transaksi, Anda harus <span className="font-semibold text-blue-600">melakukan pembayaran</span> ke akun Gopay user berikut:
             </p>
-            
+
             {pickup.user.gopayNumber ? (
               <div className="space-y-3">
                 <div>
@@ -348,22 +348,6 @@ export default function TransactionInputPage() {
             <p className="text-xs text-orange-800">
               <span className="font-semibold">Catatan:</span> User akan memverifikasi pembayaran setelah menerima transfer. Pastikan melakukan pembayaran sesuai total yang tertera.
             </p>
-          </div>
-        </div>
-
-        {/* Location */}
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h3 className="font-semibold text-lg mb-4 flex items-center">
-            <MapPin className="mr-2 text-green-600" size={20} />
-            Lokasi
-          </h3>
-          <p className="text-gray-700 mb-2">{pickup.address}</p>
-          <div className="h-64 rounded-lg overflow-hidden">
-            <MapComponent 
-              currentLat={pickup.latitude} 
-              currentLng={pickup.longitude}
-              selectable={false}
-            />
           </div>
         </div>
 

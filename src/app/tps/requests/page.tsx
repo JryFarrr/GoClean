@@ -220,7 +220,7 @@ export default function TPSRequestsPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-green-800">Permintaan</h1>
         <p className="text-green-700 mt-2">
-          Kelola permintaan penjemputan sampah dari masyarakat
+          Kelola permintaan sampah dari masyarakat
         </p>
       </div>
 
@@ -286,8 +286,8 @@ export default function TPSRequestsPage() {
               {/* Service Type Badge */}
               <div className="mb-4">
                 <span className={`px-3 py-1 rounded-full text-xs font-semibold ${pickup.type === 'DROP_OFF'
-                    ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                    : 'bg-orange-100 text-orange-800 border border-orange-200'
+                  ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                  : 'bg-orange-100 text-orange-800 border border-orange-200'
                   }`}>
                   {pickup.type === 'DROP_OFF' ? '🚚 Antar ke TPS' : '🛵 Minta Jemput'}
                 </span>
@@ -297,7 +297,9 @@ export default function TPSRequestsPage() {
               <div className="flex items-start space-x-2 mb-4">
                 <MapPin size={18} className="text-green-500 mt-0.5 shrink-0" />
                 <div className="flex-1">
-                  <p className="text-green-700 text-sm font-medium">📍 Lokasi Pengambilan Sampah</p>
+                  <p className="text-green-700 text-sm font-medium">
+                    {pickup.type === 'DROP_OFF' ? '📍 Lokasi Pengantaran' : '📍 Lokasi Pengambilan Sampah'}
+                  </p>
                   <p className="text-green-700 text-sm mt-1">{pickup.address}</p>
                 </div>
               </div>
@@ -412,7 +414,7 @@ export default function TPSRequestsPage() {
                       className="flex-1 flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
                     >
                       <Truck size={18} className="mr-2" />
-                      Berangkat Jemput
+                      {pickup.type === 'DROP_OFF' ? 'Menunggu Kedatangan' : 'Berangkat Jemput'}
                     </button>
 
                     <button

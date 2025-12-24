@@ -19,6 +19,7 @@ interface WasteItem {
 interface PickupRequest {
   id: string
   status: string
+  type: string // PICKUP or DROP_OFF
   address: string
   description?: string
   photos: string[]
@@ -76,7 +77,7 @@ export default function PickupHistoryPage() {
     try {
       const params = new URLSearchParams()
       if (selectedStatus) params.append('status', selectedStatus)
-      
+
       const res = await fetch(`/api/pickups?${params}`)
       const data = await res.json()
       setPickups(data.data || [])
@@ -133,9 +134,9 @@ export default function PickupHistoryPage() {
         </Link>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-green-800">Riwayat Penjemputan</h1>
+            <h1 className="text-3xl font-bold text-green-800">Riwayat Permintaan</h1>
             <p className="text-green-700 mt-2">
-              Lihat semua permintaan penjemputan sampah Anda
+              Lihat semua permintaan sampah Anda
             </p>
           </div>
         </div>
@@ -146,11 +147,10 @@ export default function PickupHistoryPage() {
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setSelectedStatus('')}
-            className={`px-4 py-2 rounded-full transition ${
-              selectedStatus === ''
-                ? 'bg-green-600 text-white'
-                : 'bg-green-50 text-green-700 hover:bg-green-100'
-            }`}
+            className={`px-4 py-2 rounded-full transition ${selectedStatus === ''
+              ? 'bg-green-600 text-white'
+              : 'bg-green-50 text-green-700 hover:bg-green-100'
+              }`}
           >
             Semua
           </button>
@@ -158,11 +158,10 @@ export default function PickupHistoryPage() {
             <button
               key={key}
               onClick={() => setSelectedStatus(key)}
-              className={`px-4 py-2 rounded-full transition ${
-                selectedStatus === key
-                  ? 'bg-green-600 text-white'
-                  : 'bg-green-50 text-green-700 hover:bg-green-100'
-              }`}
+              className={`px-4 py-2 rounded-full transition ${selectedStatus === key
+                ? 'bg-green-600 text-white'
+                : 'bg-green-50 text-green-700 hover:bg-green-100'
+                }`}
             >
               {label}
             </button>
@@ -184,6 +183,12 @@ export default function PickupHistoryPage() {
                   <div className="flex items-start space-x-3">
                     <span className={`px-3 py-1 rounded-full text-sm ${STATUS_LABELS[pickup.status]?.color || 'bg-gray-100'}`}>
                       {STATUS_LABELS[pickup.status]?.label || pickup.status}
+                    </span>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${pickup.type === 'DROP_OFF'
+                        ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                        : 'bg-orange-100 text-orange-800 border border-orange-200'
+                      }`}>
+                      {pickup.type === 'DROP_OFF' ? '🚚 Antar ke TPS' : '🛵 Minta Jemput'}
                     </span>
                     <span className="text-sm text-green-600">
                       {new Date(pickup.createdAt).toLocaleDateString('id-ID', {
@@ -292,7 +297,7 @@ export default function PickupHistoryPage() {
             Belum Ada Permintaan
           </h3>
           <p className="text-green-600">
-            Anda belum membuat permintaan penjemputan sampah
+            Anda belum membuat permintaan sampah
           </p>
         </div>
       )}
