@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/prepare-production.js && prisma generate && next build",
-    "build:local": "prisma generate && next build",
+    "build": "prisma generate && next build",
+    "build:production": "node scripts/prepare-production.js && prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
@@ -13,9 +13,7 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:seed": "ts-node --compiler-options {\\\"module\\\":\\\"CommonJS\\\"} prisma/seed.ts",
-    "db:studio": "prisma studio",
-    "schema:switch-mysql": "node scripts/prepare-production.js",
-    "schema:restore-sqlserver": "node scripts/restore-dev-schema.js"
+    "db:studio": "prisma studio"
   },
   "prisma": {
     "seed": "npx ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"

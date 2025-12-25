@@ -6,20 +6,8 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('Seeding database...')
 
-  // Create Admin
-  const adminPassword = await hash('admin123', 12)
-  const admin = await prisma.user.upsert({
-    where: { email: 'admin@goclean.id' },
-    update: {},
-    create: {
-      email: 'admin@goclean.id',
-      password: adminPassword,
-      name: 'Admin GoClean',
-      phone: '081234567890',
-      role: 'ADMIN'
-    }
-  })
-  console.log('Created admin:', admin.email)
+  // Simplified version: only TPS and USER roles
+  // Admin role has been removed from this simplified version
 
   // Create TPS Users
   const tpsPassword = await hash('tps123', 12)
@@ -150,15 +138,16 @@ async function main() {
       tpsId: tps2.id,
       latitude: -6.2601,
       longitude: 106.8116,
-      address: 'Jl. Kemang Raya No. 50, Jakarta Selatan',
+      address: 'Jl. Kemang Raya No. 50, Jakarta  Selatan',
       description: 'Sampah elektronik dan logam bekas',
-      status: 'ACCEPTED',
+      status: 'COMPLETED', // Simplified: only PENDING or COMPLETED
+      completedAt: new Date(), // Add completion timestamp
       photos: '[]',
       videos: '[]',
       wasteItems: {
         create: [
-          { wasteType: 'ELECTRONIC', estimatedWeight: 2 },
-          { wasteType: 'METAL', estimatedWeight: 4 }
+          { wasteType: 'ELECTRONIC', estimatedWeight: 2, actualWeight: 1.8, price: 21600 },
+          { wasteType: 'METAL', estimatedWeight: 4, actualWeight: 3.5, price: 19250 }
         ]
       }
     }
@@ -385,12 +374,12 @@ async function main() {
   console.log('\nGIS Layers seeding completed!')
 
   // Create demo accounts info
-  console.log('\n=== Demo Accounts ===')
-  console.log('Admin: admin@goclean.id / admin123')
+  console.log('\n=== Demo Accounts (Simplified Version) ===')
   console.log('TPS 1: tps1@goclean.id / tps123')
   console.log('TPS 2: tps2@goclean.id / tps123')
   console.log('User 1: user1@goclean.id / user123')
   console.log('User 2: user2@goclean.id / user123')
+  console.log('Note: Admin role removed in this simplified version')
   console.log('=====================\n')
 
   // Create default settings (COMMENTED OUT - optional feature)

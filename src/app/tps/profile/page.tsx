@@ -5,15 +5,18 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { 
-  Loader2, 
-  ArrowLeft, 
+import {
+  Loader2,
+  ArrowLeft,
   Save,
   MapPin,
   Phone,
   Clock,
   Building2,
-  Smartphone
+  Smartphone,
+  Image as ImageIcon,
+  Upload,
+  X
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -37,6 +40,7 @@ interface TPSProfileData {
   operatingHours?: string
   capacity?: number
   description?: string
+  profileImage?: string | null
 }
 
 export default function TPSProfilePage() {
@@ -44,6 +48,7 @@ export default function TPSProfilePage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
   const [profile, setProfile] = useState<TPSProfileData>({
     tpsName: '',
     address: '',
@@ -54,7 +59,8 @@ export default function TPSProfilePage() {
     whatsappNumber: '',
     operatingHours: '',
     capacity: undefined,
-    description: ''
+    description: '',
+    profileImage: null
   })
 
   useEffect(() => {
@@ -86,7 +92,8 @@ export default function TPSProfilePage() {
           whatsappNumber: data.data.whatsappNumber || '',
           operatingHours: data.data.operatingHours || '',
           capacity: data.data.capacity,
-          description: data.data.description || ''
+          description: data.data.description || '',
+          profileImage: data.data.profileImage || null
         })
       }
     } catch (error) {
@@ -137,6 +144,72 @@ export default function TPSProfilePage() {
     }
   }
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validasi ukuran file (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Ukuran file maksimal 5MB')
+      return
+    }
+
+    // Validasi tipe file
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Hanya file JPG, PNG, dan WebP yang diperbolehkan')
+      return
+    }
+
+    setIsUploadingImage(true)
+    try {
+      const formData = new FormData()
+      formData.append('image', file)
+
+      const res = await fetch('/api/tps/upload-image', {
+        method: 'POST',
+        body: formData
+      })
+
+      const data = await res.json()
+
+      if (res.ok && data.imageUrl) {
+        setProfile(prev => ({ ...prev, profileImage: data.imageUrl }))
+        toast.success('Gambar berhasil diunggah')
+        // Refresh profile to get updated data
+        await fetchProfile()
+      } else {
+        toast.error(data.error || 'Gagal mengunggah gambar')
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error)
+      toast.error('Terjadi kesalahan saat mengunggah gambar')
+    } finally {
+      setIsUploadingImage(false)
+    }
+  }
+
+  const handleDeleteImage = async () => {
+    if (!confirm('Apakah Anda yakin ingin menghapus gambar profil?')) return
+
+    try {
+      const res = await fetch('/api/tps/upload-image', {
+        method: 'DELETE'
+      })
+
+      if (res.ok) {
+        setProfile(prev => ({ ...prev, profileImage: null }))
+        toast.success('Gambar berhasil dihapus')
+        await fetchProfile()
+      } else {
+        toast.error('Gagal menghapus gambar')
+      }
+    } catch (error) {
+      console.error('Error deleting image:', error)
+      toast.error('Terjadi kesalahan saat menghapus gambar')
+    }
+  }
+
   if (authStatus === 'loading' || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -184,6 +257,66 @@ export default function TPSProfilePage() {
 
       {/* Form */}
       <div className="space-y-6">
+        {/* Profile Image Upload */}
+        <div className="bg-white rounded-xl shadow-md p-6 border border-green-100">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-10 h-10 bg-pink-100 rounded-full flex items-center justify-center">
+              <ImageIcon className="text-pink-600" size={20} />
+            </div>
+            <div>
+              <h3 className="font-semibold text-green-800">Gambar Profil TPS</h3>
+              <p className="text-sm text-green-600">Unggah foto lokasi TPS Anda</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {/* Image Preview */}
+            {profile.profileImage && (
+              <div className="relative inline-block">
+                <img
+                  src={profile.profileImage}
+                  alt="TPS Profile"
+                  className="w-full max-w-md h-64 object-cover rounded-lg border-2 border-green-200"
+                />
+                <button
+                  onClick={handleDeleteImage}
+                  className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition"
+                  title="Hapus gambar"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            )}
+
+            {/* Upload Button */}
+            <div>
+              <label className="inline-flex items-center bg-green-600 text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-green-700 transition">
+                {isUploadingImage ? (
+                  <>
+                    <Loader2 className="animate-spin mr-2" size={20} />
+                    Mengunggah...
+                  </>
+                ) : (
+                  <>
+                    <Upload size={20} className="mr-2" />
+                    {profile.profileImage ? 'Ganti Gambar' : 'Unggah Gambar'}
+                  </>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageUpload}
+                  disabled={isUploadingImage}
+                />
+              </label>
+              <p className="text-xs text-gray-500 mt-2">
+                Format: JPG, PNG, WebP • Maksimal 5MB
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* TPS Name */}
         <div className="bg-white rounded-xl shadow-md p-6 border border-green-100">
           <div className="flex items-center space-x-3 mb-4">
@@ -215,7 +348,7 @@ export default function TPSProfilePage() {
               <p className="text-sm text-green-600">Alamat lengkap dan titik lokasi TPS</p>
             </div>
           </div>
-          
+
           <div className="space-y-4">
             <textarea
               value={profile.address}
@@ -340,9 +473,9 @@ export default function TPSProfilePage() {
             value={profile.capacity !== undefined && profile.capacity !== null ? profile.capacity : ''}
             onChange={(e) => {
               const value = e.target.value
-              setProfile(prev => ({ 
-                ...prev, 
-                capacity: value === '' ? undefined : parseInt(value) || undefined 
+              setProfile(prev => ({
+                ...prev,
+                capacity: value === '' ? undefined : parseInt(value) || undefined
               }))
             }}
             className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"

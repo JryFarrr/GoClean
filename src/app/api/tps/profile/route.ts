@@ -7,7 +7,7 @@ import prisma from '@/lib/prisma'
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -37,7 +37,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { tpsName, address, latitude, longitude, phone, gopayNumber, whatsappNumber, operatingHours } = body
+    const { tpsName, address, latitude, longitude, phone, gopayNumber, whatsappNumber, operatingHours, profileImage } = body
 
     if (!tpsName || !address) {
       return NextResponse.json(
@@ -67,7 +67,8 @@ export async function POST(req: NextRequest) {
         phone,
         gopayNumber,
         whatsappNumber,
-        operatingHours
+        operatingHours,
+        ...(profileImage !== undefined && { profileImage })
       },
       create: {
         userId: session.user.id,
@@ -78,7 +79,8 @@ export async function POST(req: NextRequest) {
         phone,
         gopayNumber,
         whatsappNumber,
-        operatingHours
+        operatingHours,
+        profileImage
       }
     })
 
@@ -90,7 +92,7 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: 'Profile updated successfully',
       data: profile
     })

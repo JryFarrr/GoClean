@@ -1,4 +1,4 @@
-// This is your Prisma schema file for MySQL/TiDB Cloud (Production)
+// This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
@@ -6,50 +6,48 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "sqlserver"
   url      = env("DATABASE_URL")
 }
 
-// Enums converted to String for MySQL compatibility
+// Enums converted to String for SQL Server compatibility
 // Use these constants in your application code
 
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
-  password      String    @db.VarChar(255)
-  name          String    @db.VarChar(255)
-  phone         String?   @db.VarChar(50)
-  address       String?   @db.Text
-  gopayNumber   String?   @db.VarChar(50)
-  whatsappNumber String?  @db.VarChar(50)
-  role          String    @default("USER") @db.VarChar(20) // USER, TPS, ADMIN
-  avatar        String?   @db.VarChar(500)
+  password      String
+  name          String
+  phone         String?
+  address       String?
+  gopayNumber   String?
+  whatsappNumber String?
+  role          String    @default("USER") // USER, TPS (simplified - removed ADMIN)
+  avatar        String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   // Relations
   pickupRequests PickupRequest[] @relation("UserPickups")
   tpsPickups     PickupRequest[] @relation("TPSPickups")
-  driverPickups  PickupRequest[] @relation("DriverPickups")
   tpsProfile     TPSProfile?
-  transactions   Transaction[]
-  notifications  Notification[]
 }
 
 model TPSProfile {
   id             String   @id @default(cuid())
   userId         String   @unique
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tpsName        String   @db.VarChar(255)
+  tpsName        String
   latitude       Float?
   longitude      Float?
-  address        String   @db.Text
-  phone          String?  @db.VarChar(50)
-  gopayNumber    String?  @db.VarChar(50)
-  whatsappNumber String?  @db.VarChar(50)
-  operatingHours String?  @db.VarChar(100)
+  address        String
+  phone          String?
+  gopayNumber    String?
+  whatsappNumber String?
+  operatingHours String?
   capacity       Int?
-  description    String?  @db.Text
+  description    String?
+  profileImage   String?  // URL/path untuk gambar profil lokasi TPS
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -62,9 +60,9 @@ model WastePrice {
   id            String     @id @default(cuid())
   tpsProfileId  String
   tpsProfile    TPSProfile @relation(fields: [tpsProfileId], references: [id], onDelete: Cascade)
-  wasteType     String     @db.VarChar(50)
+  wasteType     String
   pricePerKg    Float
-  description   String?    @db.Text
+  description   String?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
@@ -76,113 +74,67 @@ model PickupRequest {
   userId      String
   user        User         @relation("UserPickups", fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   
-  // Assigned TPS/Driver
+  // Assigned TPS
   tpsId       String?
   tps         User?        @relation("TPSPickups", fields: [tpsId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  driverId    String?      // ID of the user with role 'TPS' who is driving
-  driver      User?        @relation("DriverPickups", fields: [driverId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   // Location
   latitude    Float
   longitude   Float
-  address     String       @db.Text
+  address     String
   
   // Request details
-  description String?      @db.Text
-  status      String       @default("PENDING") @db.VarChar(20) // PENDING, ACCEPTED, ON_THE_WAY, COMPLETED, CANCELLED
-  type        String       @default("PICKUP") @db.VarChar(20) // PICKUP, DROP_OFF
+  description String?
+  type        String       @default("PICKUP") // PICKUP, DROP_OFF
+  status      String       @default("PENDING") // PENDING, COMPLETED (simplified)
   scheduledAt DateTime?
-  pickedUpAt  DateTime?
+  completedAt DateTime?    // Renamed from pickedUpAt for clarity
   
-  // Media (stored as JSON string for MySQL compatibility)
-  photos      String?      @db.Text // JSON array of photo URLs
-  videos      String?      @db.Text // JSON array of video URLs
+  // Media (stored as JSON string)
+  photos      String       @default("[]") // JSON array of photo URLs
+  videos      String       @default("[]") // JSON array of video URLs
   
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
   // Relations
   wasteItems  WasteItem[]
-  transaction Transaction?
-  driverLocation DriverLocation?
-
-  @@index([userId])
-  @@index([tpsId])
-  @@index([driverId])
 }
 
 model WasteItem {
   id              String        @id @default(cuid())
   pickupRequestId String
   pickupRequest   PickupRequest @relation(fields: [pickupRequestId], references: [id], onDelete: Cascade)
-  wasteType       String        @db.VarChar(50) // ORGANIC, PLASTIC, PAPER, METAL, GLASS, ELECTRONIC, OTHER
+  wasteType       String        // ORGANIC, PLASTIC, PAPER, METAL, GLASS, ELECTRONIC, OTHER
   estimatedWeight Float?        // in kg
   actualWeight    Float?        // in kg (filled by TPS)
   price           Float?        // calculated price
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
-
-  @@index([pickupRequestId])
 }
 
-model DriverLocation {
-  id              String        @id @default(cuid())
-  pickupRequestId String        @unique
-  pickupRequest   PickupRequest @relation(fields: [pickupRequestId], references: [id], onDelete: Cascade)
-  latitude        Float
-  longitude       Float
-  timestamp       DateTime      @default(now()) @updatedAt
-
-  @@map("DriverLocations")
-}
-
-model Transaction {
-  id              String        @id @default(cuid())
-  pickupRequestId String        @unique
-  pickupRequest   PickupRequest @relation(fields: [pickupRequestId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  userId          String
-  user            User          @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  totalWeight     Float
-  totalPrice      Float
-  isPaid          Boolean       @default(false)
-  paidAt          DateTime?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-
-  @@index([userId])
-}
-
-model Notification {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title     String   @db.VarChar(255)
-  message   String   @db.Text
-  isRead    Boolean  @default(false)
-  type      String   @db.VarChar(50) // pickup_accepted, pickup_completed, payment, etc.
-  createdAt DateTime @default(now())
-
-  @@index([userId])
-}
+// Removed models for simplified version:
+// - DriverLocation (complex tracking feature)
+// - Transaction (payment feature removed)
+// - Notification (optional feature removed)
 
 // ============================================
 // TPS LOCATIONS - Master Data Lokasi TPS
 // ============================================
 model TPSLocation {
   id             String   @id @default(cuid())
-  name           String   @db.VarChar(255)
-  kecamatan      String   @db.VarChar(100)
-  address        String   @db.Text
+  name           String
+  kecamatan      String
+  address        String
   latitude       Float
   longitude      Float
-  operatingHours String?  @db.VarChar(100)
-  phone          String?  @db.VarChar(50)
+  operatingHours String?
+  phone          String?
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   @@map("TPSLocations")
-  @@index([kecamatan])
 }
 
 // ============================================
@@ -192,8 +144,8 @@ model TPSLocation {
 // Tabel Pendukung: Kategori
 model Kategori {
   id          String       @id @default(cuid())
-  namaKategori String      @db.VarChar(255)
-  deskripsi   String?      @db.Text
+  namaKategori String
+  deskripsi   String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
@@ -204,8 +156,8 @@ model Kategori {
 // Tabel Pendukung: Kecamatan
 model Kecamatan {
   id            String       @id @default(cuid())
-  namaKecamatan String       @db.VarChar(255)
-  kodeKecamatan String?      @db.VarChar(20)
+  namaKecamatan String
+  kodeKecamatan String?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
@@ -219,20 +171,18 @@ model Kecamatan {
 // ============================================
 model ObjekPoint {
   pointId      String     @id @default(cuid()) @map("PointID")
-  namaObjek    String     @db.VarChar(255) @map("NamaObjek")
+  namaObjek    String     @map("NamaObjek")
   kategoriId   String     @map("KategoriID")
   kategori     Kategori   @relation(fields: [kategoriId], references: [id], onDelete: Cascade)
   latitude     Float      @map("Latitude")
   longitude    Float      @map("Longitude")
-  deskripsi    String?    @db.Text @map("Deskripsi")
+  deskripsi    String?    @map("Deskripsi")
   kecamatanId  String     @map("KecamatanID")
   kecamatan    Kecamatan  @relation(fields: [kecamatanId], references: [id], onDelete: Cascade)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
   @@map("objekPoint")
-  @@index([kategoriId])
-  @@index([kecamatanId])
 }
 
 // ============================================
@@ -240,8 +190,8 @@ model ObjekPoint {
 // ============================================
 model Jalan {
   jalanId       String   @id @default(cuid()) @map("JalanID")
-  namaJalan     String   @db.VarChar(255) @map("NamaJalan")
-  koordinatJSON String   @db.Text @map("KoordinatJSON") // polyline GeoJSON
+  namaJalan     String   @map("NamaJalan")
+  koordinatJSON String   @map("KoordinatJSON") @db.NVarChar(Max) // polyline GeoJSON
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -253,13 +203,12 @@ model Jalan {
 // ============================================
 model Area {
   areaId       String    @id @default(cuid()) @map("AreaID")
-  namaArea     String    @db.VarChar(255) @map("NamaArea")
-  polygonJSON  String    @db.Text @map("PolygonJSON") // GeoJSON
+  namaArea     String    @map("NamaArea")
+  polygonJSON  String    @map("PolygonJSON") @db.NVarChar(Max) // GeoJSON
   kecamatanId  String?   @map("KecamatanID")
   kecamatan    Kecamatan? @relation(fields: [kecamatanId], references: [id], onDelete: SetNull)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
   @@map("Area")
-  @@index([kecamatanId])
 }

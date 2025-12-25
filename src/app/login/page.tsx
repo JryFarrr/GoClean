@@ -36,31 +36,9 @@ export default function LoginPage() {
       if (result?.error) {
         toast.error(result.error)
       } else if (result?.ok) {
-        // Check user role after successful login
-        const response = await fetch('/api/user/profile')
-        const userData = await response.json()
-        
-        console.log('User data from profile:', userData) // Debug log
-        
-        // Check if userData has data property (wrapped response)
-        const userRole = userData.data?.role || userData.role
-        
-        if (userRole === 'ADMIN') {
-          // Admin TIDAK BOLEH login di halaman ini - langsung logout
-          toast.error('Akses ditolak! Admin harus login di halaman admin.')
-          // Force sign out immediately
-          await signOut({ redirect: false })
-          setIsLoading(false)
-          // Redirect to home page
-          setTimeout(() => {
-            router.push('/')
-          }, 1500)
-          return // Stop execution
-        } else {
-          // USER atau TPS boleh login
-          toast.success('Login berhasil!')
-          router.replace('/dashboard')
-        }
+        // Simplified version: only USER and TPS can login
+        toast.success('Login berhasil!')
+        router.replace('/dashboard')
       }
     } catch (error) {
       toast.error('Terjadi kesalahan saat login')
@@ -99,17 +77,6 @@ export default function LoginPage() {
             </div>
             <h1 className="text-2xl font-bold text-gray-900">Masuk ke GoClean</h1>
             <p className="text-gray-600 mt-2">Selamat datang kembali!</p>
-            <p className="text-sm text-gray-500 mt-1">Login untuk User & TPS</p>
-          </div>
-
-          {/* Admin Warning */}
-          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-3">
-            <p className="text-sm text-amber-800">
-              ⚠️ <strong>Admin:</strong> Gunakan halaman{' '}
-              <Link href="/admin/login" className="underline font-semibold text-amber-900 hover:text-amber-700">
-                login khusus admin
-              </Link>
-            </p>
           </div>
 
           {/* Form */}
@@ -197,29 +164,14 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Admin Login Link */}
-        <div className="mt-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-xl shadow p-4 border border-red-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold text-red-800">👨‍💼 Anda seorang Admin?</p>
-              <p className="text-xs text-red-600 mt-0.5">Gunakan halaman login khusus admin</p>
-            </div>
-            <Link 
-              href="/admin/login" 
-              className="px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition whitespace-nowrap"
-            >
-              Login Admin
-            </Link>
-          </div>
-        </div>
+
 
         {/* Demo Accounts */}
         <div className="mt-4 bg-white rounded-xl shadow p-4">
-          <p className="text-sm text-gray-500 mb-2">Demo accounts:</p>
+          <p className="text-sm text-gray-500 mb-2">Demo accounts (Simplified Version):</p>
           <div className="text-xs text-gray-400 space-y-1">
-            <p>User: user@goclean.com / user123</p>
-            <p>TPS: tps@goclean.com / tps123</p>
-            <p>Admin: admin@goclean.com / admin123</p>
+            <p>User: user1@goclean.id / user123</p>
+            <p>TPS: tps1@goclean.id / tps123</p>
           </div>
         </div>
       </div>

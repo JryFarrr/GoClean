@@ -85,16 +85,6 @@ export async function POST(req: NextRequest) {
       }
     })
 
-    // Create notification for user
-    await prisma.notification.create({
-      data: {
-        userId: session.user.id,
-        title: '📦 Permintaan Penjemputan Dibuat',
-        message: `Permintaan penjemputan sampah Anda telah dibuat. Menunggu konfirmasi dari TPS terdekat di ${address}.`,
-        type: 'pickup_created'
-      }
-    })
-
     return NextResponse.json(pickupRequest, { status: 201 })
   } catch (error) {
     console.error('Pickup request error:', error)
@@ -164,8 +154,7 @@ export async function GET(req: NextRequest) {
               }
             }
           },
-          wasteItems: true,
-          transaction: true
+          wasteItems: true
         },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,
