@@ -22,23 +22,24 @@ export default function Navbar() {
   const { data: session } = useSession()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
-  const { unreadCount, setUnreadCount } = useNotificationStore()
+  // Notification feature removed in simplified version
+  // const { unreadCount, setUnreadCount } = useNotificationStore()
 
-  useEffect(() => {
-    if (session?.user) {
-      fetchNotifications()
-    }
-  }, [session])
+  // useEffect(() => {
+  //   if (session?.user) {
+  //     fetchNotifications()
+  //   }
+  // }, [session])
 
-  const fetchNotifications = async () => {
-    try {
-      const res = await fetch('/api/notifications')
-      const data = await res.json()
-      setUnreadCount(data.unreadCount)
-    } catch (error) {
-      console.error('Error fetching notifications:', error)
-    }
-  }
+  // const fetchNotifications = async () => {
+  //   try {
+  //     const res = await fetch('/api/notifications')
+  //     const data = await res.json()
+  //     setUnreadCount(data.unreadCount)
+  //   } catch (error) {
+  //     console.error('Error fetching notifications:', error)
+  //   }
+  // }
 
   const getNavItems = () => {
     if (!session?.user) return []
