@@ -263,19 +263,3 @@ model Area {
   @@map("Area")
   @@index([kecamatanId])
 }
-
-// ============================================
-// 4. SYSTEM SETTINGS
-// ============================================
-model Setting {
-  id          String   @id @default(cuid())
-  key         String   @unique @db.VarChar(100)
-  value       String   @db.Text
-  description String?  @db.VarChar(255)
-  category    String   @db.VarChar(50) // 'system', 'notification', 'security', 'appearance'
-  isPublic    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("Setting")
-}

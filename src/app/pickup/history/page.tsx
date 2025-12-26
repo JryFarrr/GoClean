@@ -138,6 +138,12 @@ export default function PickupHistoryPage() {
               Lihat semua permintaan penjemputan sampah Anda
             </p>
           </div>
+          <Link
+            href="/pickup/new"
+            className="mt-4 md:mt-0 inline-flex items-center bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition"
+          >
+            + Buat Permintaan Baru
+          </Link>
         </div>
       </div>
 
@@ -291,9 +297,15 @@ export default function PickupHistoryPage() {
           <h3 className="text-xl font-semibold text-green-800 mb-2">
             Belum Ada Permintaan
           </h3>
-          <p className="text-green-600">
+          <p className="text-green-600 mb-6">
             Anda belum membuat permintaan penjemputan sampah
           </p>
+          <Link
+            href="/pickup/new"
+            className="inline-flex items-center bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition"
+          >
+            Buat Permintaan Pertama
+          </Link>
         </div>
       )}
     </div>

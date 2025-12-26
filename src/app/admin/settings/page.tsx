@@ -2,115 +2,31 @@
 
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
-import { Settings, Database, Bell, Shield, Loader2, Save } from 'lucide-react'
-import toast from 'react-hot-toast'
-
-interface Setting {
-  id: string
-  key: string
-  value: string
-  description?: string
-  category: string
-  isPublic: boolean
-}
-
-interface SettingsData {
-  [category: string]: Setting[]
-}
+import { useEffect } from 'react'
+import { Settings, Database, Bell, Shield, Palette } from 'lucide-react'
 
 export default function AdminSettingsPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
-  const [settings, setSettings] = useState<SettingsData>({})
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState<string | null>(null)
 
   useEffect(() => {
-    console.log('Settings page - Auth status:', status)
-    console.log('Settings page - Session:', session)
-    console.log('Settings page - User role:', session?.user?.role)
-    
     if (status === 'unauthenticated') {
-      console.log('Settings page - User not authenticated, redirecting to login')
       router.push('/admin/login')
       return
     }
 
-    if (status === 'loading') {
-      console.log('Settings page - Auth still loading')
-      return
-    }
-
-    if (session?.user?.role?.toUpperCase() !== 'ADMIN') {
-      console.log('Settings page - User does not have ADMIN role, redirecting to login')
+    if (session?.user?.role !== 'ADMIN') {
       router.push('/admin/login')
       return
     }
-
-    console.log('Settings page - User authenticated as admin, fetching settings')
-    fetchSettings()
   }, [session, status, router])
 
-  const fetchSettings = async () => {
-    try {
-      setLoading(true)
-      const res = await fetch('/api/admin/settings')
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'Unknown error' }))
-        throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`)
-      }
-      const data = await res.json()
-      setSettings(data)
-    } catch (error) {
-      console.error('Error fetching settings:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Gagal memuat pengaturan'
-      toast.error(`Error: ${errorMessage}`)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const updateSetting = async (key: string, value: string, category: string, description?: string) => {
-    try {
-      setSaving(key)
-      const res = await fetch('/api/admin/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key, value, category, description })
-      })
-
-      if (!res.ok) throw new Error('Failed to update setting')
-
-      const updatedSetting = await res.json()
-
-      // Update local state
-      setSettings(prev => ({
-        ...prev,
-        [category]: prev[category]?.map(s =>
-          s.key === key ? updatedSetting : s
-        ) || [updatedSetting]
-      }))
-
-      toast.success('Pengaturan berhasil disimpan')
-    } catch (error) {
-      console.error('Error updating setting:', error)
-      toast.error('Gagal menyimpan pengaturan')
-    } finally {
-      setSaving(null)
-    }
-  }
-
-  const getSettingValue = (category: string, key: string, defaultValue: string = '') => {
-    return settings[category]?.find(s => s.key === key)?.value || defaultValue
-  }
-
-  if (status === 'loading' || loading) {
+  if (status === 'loading') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="animate-spin h-12 w-12 text-green-600 mx-auto mb-4" />
-          <p className="text-green-600">Memuat settings...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+          <p className="mt-4 text-green-600">Memuat settings...</p>
         </div>
       </div>
     )
@@ -132,6 +48,28 @@ export default function AdminSettingsPage() {
 
         {/* Settings Sections */}
         <div className="grid md:grid-cols-2 gap-6">
+          {/* System Settings */}
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <Database className="text-green-600" size={24} />
+              <h2 className="text-xl font-bold text-green-800">Database & Sistem</h2>
+            </div>
+            <div className="space-y-4">
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <p className="font-medium text-gray-700">Database Status</p>
+                <p className="text-sm text-green-600">✓ Connected (SQL Server)</p>
+              </div>
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <p className="font-medium text-gray-700">App Version</p>
+                <p className="text-sm text-gray-600">GoClean v1.0.0</p>
+              </div>
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <p className="font-medium text-gray-700">Environment</p>
+                <p className="text-sm text-gray-600">{process.env.NODE_ENV || 'development'}</p>
+              </div>
+            </div>
+          </div>
+
           {/* Notification Settings */}
           <div className="bg-white rounded-xl shadow-md p-6">
             <div className="flex items-center space-x-3 mb-4">
@@ -145,15 +83,8 @@ export default function AdminSettingsPage() {
                   <p className="text-sm text-gray-600">Kirim notifikasi via email</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="sr-only peer"
-                    checked={getSettingValue('notification', 'email_notifications') === 'true'}
-                    onChange={(e) => updateSetting('email_notifications', e.target.checked.toString(), 'notification', 'Enable email notifications')}
-                    disabled={saving === 'email_notifications'}
-                  />
+                  <input type="checkbox" className="sr-only peer" defaultChecked />
                   <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                  {saving === 'email_notifications' && <Loader2 className="animate-spin ml-2" size={16} />}
                 </label>
               </div>
               <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
@@ -162,15 +93,8 @@ export default function AdminSettingsPage() {
                   <p className="text-sm text-gray-600">Notifikasi real-time</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="sr-only peer"
-                    checked={getSettingValue('notification', 'push_notifications') === 'true'}
-                    onChange={(e) => updateSetting('push_notifications', e.target.checked.toString(), 'notification', 'Enable push notifications')}
-                    disabled={saving === 'push_notifications'}
-                  />
+                  <input type="checkbox" className="sr-only peer" defaultChecked />
                   <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                  {saving === 'push_notifications' && <Loader2 className="animate-spin ml-2" size={16} />}
                 </label>
               </div>
             </div>
@@ -198,24 +122,29 @@ export default function AdminSettingsPage() {
             </div>
           </div>
 
-          {/* System Settings */}
+          {/* Appearance Settings */}
           <div className="bg-white rounded-xl shadow-md p-6">
             <div className="flex items-center space-x-3 mb-4">
-              <Database className="text-green-600" size={24} />
-              <h2 className="text-xl font-bold text-green-800">Database & Sistem</h2>
+              <Palette className="text-green-600" size={24} />
+              <h2 className="text-xl font-bold text-green-800">Tampilan</h2>
             </div>
             <div className="space-y-4">
               <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="font-medium text-gray-700">Database Status</p>
-                <p className="text-sm text-green-600">✓ Connected (MySQL)</p>
+                <p className="font-medium text-gray-700">Theme</p>
+                <select className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600">
+                  <option>Light Mode</option>
+                  <option>Dark Mode</option>
+                  <option>System Default</option>
+                </select>
               </div>
               <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="font-medium text-gray-700">App Version</p>
-                <p className="text-sm text-gray-600">GoClean v1.0.0</p>
-              </div>
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="font-medium text-gray-700">Environment</p>
-                <p className="text-sm text-gray-600">{process.env.NODE_ENV || 'development'}</p>
+                <p className="font-medium text-gray-700">Primary Color</p>
+                <div className="mt-2 flex space-x-2">
+                  <div className="w-8 h-8 bg-green-600 rounded-full border-2 border-green-800"></div>
+                  <div className="w-8 h-8 bg-blue-600 rounded-full"></div>
+                  <div className="w-8 h-8 bg-purple-600 rounded-full"></div>
+                  <div className="w-8 h-8 bg-orange-600 rounded-full"></div>
+                </div>
               </div>
             </div>
           </div>
