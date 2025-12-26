@@ -72,12 +72,11 @@ export default function RegisterPage() {
   const filteredTPS = useMemo(() => {
     if (!tpsSearch.trim()) return tpsLocations
     const search = tpsSearch.toLowerCase()
-    return tpsLocations.filter(tps => 
-      tps.name.toLowerCase().includes(search) ||
-      tps.kecamatan.toLowerCase().includes(search) ||
-      tps.address.toLowerCase().includes(search)
+    return tpsLocations.filter(tps =>
+      tps.name?.toLowerCase().includes(search) ||
+      tps.address?.toLowerCase().includes(search)
     )
-  }, [tpsSearch])
+  }, [tpsSearch, tpsLocations])
 
   // Handle TPS selection
   const handleSelectTPS = (tpsId: string) => {
@@ -184,11 +183,10 @@ export default function RegisterPage() {
                 <button
                   type="button"
                   onClick={() => setRole('USER')}
-                  className={`p-6 rounded-xl border-2 transition text-center ${
-                    role === 'USER'
+                  className={`p-6 rounded-xl border-2 transition text-center ${role === 'USER'
                       ? 'border-green-500 bg-green-50'
                       : 'border-gray-200 hover:border-green-300'
-                  }`}
+                    }`}
                 >
                   <div className="text-4xl mb-2">👨‍👩‍👧‍👦</div>
                   <p className="font-semibold text-gray-800">Masyarakat</p>
@@ -197,11 +195,10 @@ export default function RegisterPage() {
                 <button
                   type="button"
                   onClick={() => setRole('TPS')}
-                  className={`p-6 rounded-xl border-2 transition text-center ${
-                    role === 'TPS'
+                  className={`p-6 rounded-xl border-2 transition text-center ${role === 'TPS'
                       ? 'border-green-500 bg-green-50'
                       : 'border-gray-200 hover:border-green-300'
-                  }`}
+                    }`}
                 >
                   <div className="text-4xl mb-2">🏭</div>
                   <p className="font-semibold text-gray-800">Pihak TPS</p>
@@ -297,7 +294,7 @@ export default function RegisterPage() {
                         className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       />
                     </div>
-                    
+
                     {/* Dropdown List */}
                     {showTpsDropdown && filteredTPS.length > 0 && (
                       <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
@@ -306,9 +303,8 @@ export default function RegisterPage() {
                             key={tps.id}
                             type="button"
                             onClick={() => handleSelectTPS(tps.id)}
-                            className={`w-full text-left px-4 py-3 hover:bg-green-50 border-b border-gray-100 last:border-b-0 transition ${
-                              formData.selectedTpsId === tps.id ? 'bg-green-50' : ''
-                            }`}
+                            className={`w-full text-left px-4 py-3 hover:bg-green-50 border-b border-gray-100 last:border-b-0 transition ${formData.selectedTpsId === tps.id ? 'bg-green-50' : ''
+                              }`}
                           >
                             <div className="font-medium text-gray-900">{tps.name}</div>
                             <div className="text-sm text-gray-600">{tps.kecamatan}</div>
@@ -317,7 +313,7 @@ export default function RegisterPage() {
                         ))}
                       </div>
                     )}
-                    
+
                     {showTpsDropdown && filteredTPS.length === 0 && tpsSearch && (
                       <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-4 text-center text-gray-500">
                         TPS tidak ditemukan

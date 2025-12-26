@@ -39,41 +39,56 @@ export async function POST(req: NextRequest) {
     try {
       await transaction.begin()
 
-      // 1. Insert Akun
+      // 1. Insert Akun with timestamps
       const akunResult = await transaction.request()
         .input('email', sql.NVarChar, email)
         .input('password', sql.NVarChar, hashedPassword)
         .input('role', sql.NVarChar, role || 'USER')
         .query(`
-          INSERT INTO Akun (Email, Password, Role)
+          INSERT INTO Akun (IDAkun, Email, Password, Role, CreatedAt, UpdatedAt)
           OUTPUT INSERTED.IDAkun
-          VALUES (@email, @password, @role)
+          VALUES (NEWID(), @email, @password, @role, GETDATE(), GETDATE())
         `)
 
       const akunId = akunResult.recordset[0].IDAkun
 
-      // 2. Insert User or ProfileTps
+      // 2. Insert User or UPDATE/INSERT ProfileTps
       if (role === 'TPS' && tpsData) {
-        await transaction.request()
-          .input('idAkun', sql.NVarChar, akunId)
-          .input('namaTps', sql.NVarChar, tpsData.tpsName)
-          .input('alamat', sql.NVarChar, tpsData.address)
-          .input('latitude', sql.Float, tpsData.latitude || null)
-          .input('longitude', sql.Float, tpsData.longitude || null)
-          .input('jamOperasional', sql.NVarChar, tpsData.operatingHours || null)
-          .input('noTelp', sql.NVarChar, phone || null)
-          .query(`
-            INSERT INTO ProfileTps (IDAkun, NamaTps, Alamat, Latitude, Longitude, JamOperasional, NoTelp)
-            VALUES (@idAkun, @namaTps, @alamat, @latitude, @longitude, @jamOperasional, @noTelp)
-          `)
+        // Check if user selected existing TPS
+        if (tpsData.selectedTpsId) {
+          // UPDATE existing TPS location with akun
+          await transaction.request()
+            .input('idAkun', sql.NVarChar, akunId)
+            .input('idTps', sql.NVarChar, tpsData.selectedTpsId)
+            .query(`
+              UPDATE ProfileTps
+              SET IDAkun = @idAkun, UpdatedAt = GETDATE()
+              WHERE IDTps = @idTps AND IDAkun IS NULL
+            `)
+        } else {
+          // INSERT new TPS location
+          await transaction.request()
+            .input('idAkun', sql.NVarChar, akunId)
+            .input('namaTps', sql.NVarChar, tpsData.tpsName)
+            .input('alamat', sql.NVarChar, tpsData.address)
+            .input('latitude', sql.Float, tpsData.latitude || null)
+            .input('longitude', sql.Float, tpsData.longitude || null)
+            .input('jamOperasional', sql.NVarChar, tpsData.operatingHours || null)
+            .input('noTelp', sql.NVarChar, phone || null)
+            .query(`
+              INSERT INTO ProfileTps (IDTps, IDAkun, NamaTps, Alamat, Latitude, Longitude, JamOperasional, NoTelp, CreatedAt, UpdatedAt)
+              VALUES (NEWID(), @idAkun, @namaTps, @alamat, @latitude, @longitude, @jamOperasional, @noTelp, GETDATE(), GETDATE())
+            `)
+        }
       } else {
+        // INSERT User
         await transaction.request()
           .input('idAkun', sql.NVarChar, akunId)
           .input('nama', sql.NVarChar, name)
           .input('noTelp', sql.NVarChar, phone || null)
           .query(`
-            INSERT INTO [User] (IDAkun, Nama, NoTelp)
-            VALUES (@idAkun, @nama, @noTelp)
+            INSERT INTO [User] (IDUser, IDAkun, Nama, NoTelp, CreatedAt, UpdatedAt)
+            VALUES (NEWID(), @idAkun, @nama, @noTelp, GETDATE(), GETDATE())
           `)
       }
 

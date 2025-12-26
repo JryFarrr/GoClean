@@ -70,8 +70,8 @@ export default function MapComponent(props: MapComponentProps) {
     draggable = false,
     showRemoveButton = false,
     showTPSMarkers = false,
-    currentLat = 0,
-    currentLng = 0,
+    currentLat = undefined,
+    currentLng = undefined,
     className = 'h-[400px] w-full',
     selectedTPSId: externalSelectedTPSId = '', // TPS yang dipilih dari luar
     highlightedMarkerId = '', // Marker yang akan di-highlight dengan animasi
@@ -95,6 +95,7 @@ export default function MapComponent(props: MapComponentProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const [selectedMarker, setSelectedMarker] = useState<L.Marker | null>(null)
   const markersLayerRef = useRef<L.Marker[]>([])
+  const [mapReady, setMapReady] = useState(false) // Track map initialization
   // Search states
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
@@ -331,7 +332,8 @@ export default function MapComponent(props: MapComponentProps) {
       tps: '🏭',
       user: '👤',
       driver: '🚚', // New icon for driver
-      pickup: '📍'
+      pickup: '📍',
+      selected: '📍' // Icon for selected location
     }
 
     return L.divIcon({
@@ -393,46 +395,13 @@ export default function MapComponent(props: MapComponentProps) {
       position: 'bottomright'
     }).addTo(mapRef.current)
 
+    // Set map as ready after initialization
+    setMapReady(true)
+
     // Add click handler for location selection
     if (selectable && onLocationSelect) {
       mapRef.current.on('click', async (e: L.LeafletMouseEvent) => {
         const { lat, lng } = e.latlng
-
-        // Remove previous selected marker
-        if (selectedMarker) {
-          mapRef.current?.removeLayer(selectedMarker)
-        }
-
-        // Add new marker (draggable if specified)
-        const marker = L.marker([lat, lng], {
-          icon: createIcon('selected'),
-          draggable: draggable
-        }).addTo(mapRef.current!)
-
-        setSelectedMarker(marker)
-
-        // Handle drag end event if draggable
-        if (draggable) {
-          marker.on('dragend', async function (event) {
-            const position = event.target.getLatLng()
-            try {
-              const response = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.lat}&lon=${position.lng}`
-              )
-              const data = await response.json()
-              const address = data.display_name || `${position.lat.toFixed(6)}, ${position.lng.toFixed(6)}`
-
-              marker.setPopupContent(`<b>Lokasi Dipilih</b><br>${address}<br><small>(Geser marker untuk mengubah)</small>`).openPopup()
-              if (onLocationSelect) {
-                onLocationSelect(position.lat, position.lng, address)
-              }
-            } catch {
-              if (onLocationSelect) {
-                onLocationSelect(position.lat, position.lng, `${position.lat.toFixed(6)}, ${position.lng.toFixed(6)}`)
-              }
-            }
-          })
-        }
 
         // Reverse geocoding to get address
         try {
@@ -442,11 +411,7 @@ export default function MapComponent(props: MapComponentProps) {
           const data = await response.json()
           const address = data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`
 
-          const popupContent = draggable
-            ? `<b>Lokasi Dipilih</b><br>${address}<br><small>(Geser marker untuk mengubah)</small>`
-            : `<b>Lokasi Dipilih</b><br>${address}`
-
-          marker.bindPopup(popupContent).openPopup()
+          // Only call onLocationSelect - marker will be created by currentLat/currentLng effect
           onLocationSelect(lat, lng, address)
         } catch {
           onLocationSelect(lat, lng, `${lat.toFixed(6)}, ${lng.toFixed(6)}`)
@@ -458,6 +423,7 @@ export default function MapComponent(props: MapComponentProps) {
       if (mapRef.current) {
         mapRef.current.remove()
         mapRef.current = null
+        setMapReady(false) // Reset map ready state on cleanup
       }
     }
   }, [])
@@ -503,23 +469,91 @@ export default function MapComponent(props: MapComponentProps) {
 
   // Handle currentLat/currentLng marker display
   useEffect(() => {
-    if (!mapRef.current) return
+    if (!mapRef.current || !mapReady) return // Wait for map to be ready
 
     // Remove previous selected marker if exists
     if (selectedMarker) {
       try {
         mapRef.current.removeLayer(selectedMarker)
+        setSelectedMarker(null)
       } catch (e) {
         // Marker already removed
       }
     }
 
-    // Add new marker if currentLat and currentLng are provided
-    if (currentLat && currentLng && currentLat !== 0 && currentLng !== 0) {
+    // Add new marker if currentLat and currentLng are valid (not undefined, not null, not 0)
+    if (
+      currentLat != null &&
+      currentLng != null &&
+      !isNaN(currentLat) &&
+      !isNaN(currentLng) &&
+      currentLat !== 0 &&
+      currentLng !== 0
+    ) {
+      console.log('[MARKER DEBUG] Creating new marker at:', currentLat, currentLng)
+
+      // Create a custom pane for the location marker to completely isolate it
+      if (!mapRef.current.getPane('locationMarkerPane')) {
+        mapRef.current.createPane('locationMarkerPane')
+        const pane = mapRef.current.getPane('locationMarkerPane')
+        if (pane) {
+          pane.style.zIndex = '650' // Higher than default marker pane (600)
+        }
+      }
+
+      // Create custom icon to avoid 404 errors with default Leaflet icons
+      const customIcon = L.divIcon({
+        className: 'custom-location-marker',
+        html: `
+          <div style="
+            position: relative;
+            width: 40px;
+            height: 40px;
+          ">
+            <div style="
+              background-color: #EF4444;
+              width: 40px;
+              height: 40px;
+              border-radius: 50% 50% 50% 0;
+              transform: rotate(-45deg);
+              border: 4px solid white;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+              position: absolute;
+              top: 0;
+              left: 0;
+            ">
+              <div style="
+                transform: rotate(45deg);
+                color: white;
+                font-size: 20px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 100%;
+                font-weight: bold;
+              ">
+                📍
+              </div>
+            </div>
+          </div>
+        `,
+        iconSize: [40, 40],
+        iconAnchor: [20, 40],
+        popupAnchor: [0, -40]
+      })
+
       const marker = L.marker([currentLat, currentLng], {
-        icon: createIcon('selected', undefined, false)
+        icon: customIcon,
+        draggable: draggable,
+        pane: 'locationMarkerPane' // Use dedicated pane - will NOT be affected by markers array cleanup
       }).addTo(mapRef.current)
 
+      // Add tracking ID for debugging
+      const trackingId = `marker-${Date.now()}`
+        ; (marker as any)._trackingId = trackingId
+
+      console.log('[MARKER DEBUG] Marker created with ID:', trackingId)
+      console.log('[MARKER DEBUG] Marker added to dedicated pane: locationMarkerPane')
       marker.bindPopup(`
         <b>Lokasi Dipilih</b><br>
         <small>Koordinat: ${currentLat.toFixed(6)}, ${currentLng.toFixed(6)}</small>
@@ -532,13 +566,13 @@ export default function MapComponent(props: MapComponentProps) {
     } else {
       setSelectedMarker(null)
     }
-  }, [currentLat, currentLng])
+  }, [currentLat, currentLng, draggable, mapReady])
 
   // Update markers
   useEffect(() => {
     if (!mapRef.current) return
 
-    // Clear previous markers
+    // Clear ALL markers in markersLayerRef (selectedMarker is NOT stored here, so it's safe)
     markersLayerRef.current.forEach(marker => {
       mapRef.current?.removeLayer(marker)
     })
@@ -1121,56 +1155,61 @@ export default function MapComponent(props: MapComponentProps) {
                         Ditemukan {filteredMarkers.length} TPS dalam radius {searchRadius} km:
                       </p>
                       <div className="max-h-48 overflow-y-auto space-y-1">
-                        {filteredMarkers
-                          .sort((a, b) => {
-                            if (currentLat === null || currentLng === null) return 0
-                            const distA = calculateDistance(currentLat, currentLng, a.lat, a.lng)
-                            const distB = calculateDistance(currentLat, currentLng, b.lat, b.lng)
-                            return distA - distB
-                          })
-                          .map((marker, index) => {
-                            if (currentLat === null || currentLng === null) return null
-                            const distance = calculateDistance(currentLat, currentLng, marker.lat, marker.lng)
-                            return (
-                              <button
-                                key={index}
-                                onClick={() => {
-                                  // Set selected TPS untuk highlight dengan warna merah
-                                  setSelectedTPSId(marker.id)
+                        {(() => {
+                          // Extract and type-narrow currentLat/currentLng
+                          const lat = currentLat
+                          const lng = currentLng
+                          if (lat === null || lng === null || lat === undefined || lng === undefined) return null
 
-                                  if (onTPSSelect && marker.type === 'tps') {
-                                    onTPSSelect(marker.id, marker.lat, marker.lng, marker.address || '')
-                                  }
-                                  if (mapRef.current) {
-                                    mapRef.current.flyTo([marker.lat, marker.lng], 16, { duration: 1 })
-                                  }
-                                }}
-                                className={`w-full text-left p-2 rounded-lg transition text-xs ${marker.id === selectedTPSId
-                                  ? 'bg-red-100 border border-red-300'
-                                  : 'bg-green-50 hover:bg-green-100'
-                                  }`}
-                              >
-                                <div className="flex items-start justify-between">
-                                  <div className="flex items-start space-x-2 flex-1 min-w-0">
-                                    <span className="text-base">🏭</span>
-                                    <div className="flex-1 min-w-0">
-                                      <p className="font-semibold text-gray-900 truncate">
-                                        {marker.title}
-                                      </p>
-                                      {marker.kecamatan && (
-                                        <p className="text-gray-600 truncate">
-                                          {marker.kecamatan}
+                          return filteredMarkers
+                            .sort((a, b) => {
+                              const distA = calculateDistance(lat, lng, a.lat, a.lng)
+                              const distB = calculateDistance(lat, lng, b.lat, b.lng)
+                              return distA - distB
+                            })
+                            .map((marker, index) => {
+                              const distance = calculateDistance(lat, lng, marker.lat, marker.lng)
+                              return (
+                                <button
+                                  key={index}
+                                  onClick={() => {
+                                    // Set selected TPS untuk highlight dengan warna merah
+                                    setSelectedTPSId(marker.id)
+
+                                    if (onTPSSelect && marker.type === 'tps') {
+                                      onTPSSelect(marker.id, marker.lat, marker.lng, marker.address || '')
+                                    }
+                                    if (mapRef.current) {
+                                      mapRef.current.flyTo([marker.lat, marker.lng], 16, { duration: 1 })
+                                    }
+                                  }}
+                                  className={`w-full text-left p-2 rounded-lg transition text-xs ${marker.id === selectedTPSId
+                                    ? 'bg-red-100 border border-red-300'
+                                    : 'bg-green-50 hover:bg-green-100'
+                                    }`}
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex items-start space-x-2 flex-1 min-w-0">
+                                      <span className="text-base">🏭</span>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="font-semibold text-gray-900 truncate">
+                                          {marker.title}
                                         </p>
-                                      )}
+                                        {marker.kecamatan && (
+                                          <p className="text-gray-600 truncate">
+                                            {marker.kecamatan}
+                                          </p>
+                                        )}
+                                      </div>
                                     </div>
+                                    <span className="text-green-600 font-bold ml-2 flex-shrink-0">
+                                      {distance.toFixed(1)} km
+                                    </span>
                                   </div>
-                                  <span className="text-green-600 font-bold ml-2 flex-shrink-0">
-                                    {distance.toFixed(1)} km
-                                  </span>
-                                </div>
-                              </button>
-                            )
-                          })}
+                                </button>
+                              )
+                            })
+                        })()}
                       </div>
                     </div>
                   )}

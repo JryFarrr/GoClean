@@ -358,18 +358,118 @@ export default function TPSProfilePage() {
               placeholder="Alamat lengkap TPS..."
             />
 
-            <div className="h-64 rounded-lg overflow-hidden">
+            {/* Map with Geolocation Button Overlay */}
+            <div className="h-64 rounded-lg overflow-hidden relative">
               <MapComponent
                 onLocationSelect={handleLocationSelect}
-                currentLat={profile.latitude}
-                currentLng={profile.longitude}
+                currentLat={profile.latitude ?? undefined}
+                currentLng={profile.longitude ?? undefined}
                 selectable={true}
+                draggable={true}
               />
+
+              {/* Control Buttons - Bottom Right */}
+              <div className="absolute bottom-3 right-3 z-[1000] flex gap-2">
+                {/* Delete Marker Button */}
+                {profile.latitude && profile.longitude && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProfile(prev => ({
+                        ...prev,
+                        latitude: undefined,
+                        longitude: undefined
+                      }))
+                      toast.success('Marker dihapus')
+                    }}
+                    className="inline-flex items-center bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition shadow-lg"
+                    title="Hapus marker"
+                  >
+                    🗑️ Hapus Marker
+                  </button>
+                )}
+
+                {/* Geolocation Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (navigator.geolocation) {
+                      toast.loading('Mengambil lokasi Anda...')
+                      navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                          const lat = position.coords.latitude
+                          const lng = position.coords.longitude
+                          setProfile(prev => ({
+                            ...prev,
+                            latitude: lat,
+                            longitude: lng
+                          }))
+                          toast.dismiss()
+                          toast.success('Lokasi berhasil dideteksi!')
+                        },
+                        (error) => {
+                          toast.dismiss()
+                          toast.error('Gagal mendeteksi lokasi. Pastikan GPS aktif.')
+                          console.error('Geolocation error:', error)
+                        }
+                      )
+                    } else {
+                      toast.error('Browser tidak support geolocation')
+                    }
+                  }}
+                  className="inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition shadow-lg"
+                  title="Gunakan lokasi saya"
+                >
+                  🎯 Lokasi Saya
+                </button>
+              </div>
+            </div>
+
+            {/* Latitude & Longitude Inputs */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Latitude
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  value={profile.latitude !== undefined && profile.latitude !== null ? profile.latitude : ''}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    setProfile(prev => ({
+                      ...prev,
+                      latitude: value === '' ? undefined : parseFloat(value)
+                    }))
+                  }}
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="-7.2575"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Longitude
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  value={profile.longitude !== undefined && profile.longitude !== null ? profile.longitude : ''}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    setProfile(prev => ({
+                      ...prev,
+                      longitude: value === '' ? undefined : parseFloat(value)
+                    }))
+                  }}
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="112.7521"
+                />
+              </div>
             </div>
 
             {profile.latitude && profile.longitude && !isNaN(profile.latitude) && !isNaN(profile.longitude) && (
               <p className="text-sm text-green-600">
-                Koordinat: {profile.latitude.toFixed(6)}, {profile.longitude.toFixed(6)}
+                ✓ Koordinat tersimpan: {profile.latitude.toFixed(6)}, {profile.longitude.toFixed(6)}
               </p>
             )}
           </div>
