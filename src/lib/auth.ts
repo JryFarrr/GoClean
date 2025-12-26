@@ -80,46 +80,62 @@ export const authOptions: NextAuthOptions = {
        */
       async authorize(credentials, req) {
         // ===== STEP 1: INPUT VALIDATION =====
-        // Pastikan email dan password tidak kosong
         if (!credentials?.email || !credentials?.password) {
           throw new Error('Email dan password harus diisi')
         }
 
-        // ===== STEP 2: DATABASE QUERY =====
-        // Cari user berdasarkan email, include tpsProfile untuk validasi role TPS
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-          include: { tpsProfile: true } // Include untuk cek apakah user adalah TPS
-        })
+        // ===== STEP 2: DATABASE QUERY (RAW SQL) =====
+        const { executeQuerySingle } = await import('@/lib/db')
 
-        // Jika user tidak ditemukan, throw error
-        if (!user) {
+        const akun = await executeQuerySingle<{
+          IDAkun: string
+          Email: string
+          Password: string
+          Role: string
+        }>(
+          `SELECT IDAkun, Email, Password, Role 
+           FROM Akun 
+           WHERE Email = @email`,
+          { email: credentials.email }
+        )
+
+        if (!akun) {
           throw new Error('Email tidak terdaftar')
         }
 
         // ===== STEP 3: PASSWORD VERIFICATION =====
-        // Compare password yang diinput dengan hash di database
-        // bcrypt.compare() secara otomatis handle hashing dan comparison
-        const isPasswordValid = await compare(credentials.password, user.password)
+        const isPasswordValid = await compare(credentials.password, akun.Password)
 
         if (!isPasswordValid) {
           throw new Error('Password salah')
         }
 
-        // ===== STEP 4: ROLE VALIDATION =====
-        // NOTE: Role check untuk admin page dilakukan di client side
-        // karena NextAuth tidak support custom redirect logic per role
-        // Admin akan di-redirect ke /admin/login jika mencoba login di /login
+        // ===== STEP 4: GET USER/TPS NAME =====
+        let name = ''
+
+        if (akun.Role === 'USER') {
+          const user = await executeQuerySingle<{ Nama: string }>(
+            `SELECT Nama FROM [User] WHERE IDAkun = @idAkun`,
+            { idAkun: akun.IDAkun }
+          )
+          name = user?.Nama || akun.Email
+        } else if (akun.Role === 'TPS') {
+          const tps = await executeQuerySingle<{ NamaTps: string }>(
+            `SELECT NamaTps FROM ProfileTps WHERE IDAkun = @idAkun`,
+            { idAkun: akun.IDAkun }
+          )
+          name = tps?.NamaTps || akun.Email
+        } else {
+          name = akun.Email
+        }
 
         // ===== STEP 5: RETURN USER DATA =====
-        // Return user object yang akan disimpan di JWT token
-        // Hanya return data yang diperlukan, jangan return password!
         return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role, // ADMIN, TPS, atau USER
-          image: user.avatar
+          id: akun.IDAkun,
+          email: akun.Email,
+          name: name,
+          role: akun.Role,
+          image: null
         }
       }
     })

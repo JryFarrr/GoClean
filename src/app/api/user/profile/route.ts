@@ -1,48 +1,82 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import prisma from '@/lib/prisma'
+import { executeQuerySingle } from '@/lib/db'
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        phone: true,
-        address: true,
-        gopayNumber: true,
-        whatsappNumber: true,
-        role: true
-      }
-    })
+    // Get user profile based on role
+    if (session.user.role === 'USER') {
+      const user = await executeQuerySingle<{
+        IDUser: string
+        Nama: string
+        Alamat: string
+        NoTelp: string
+        Email: string
+      }>(`
+        SELECT u.IDUser, u.Nama, u.Alamat, u.NoTelp, a.Email
+        FROM [User] u
+        JOIN Akun a ON u.IDAkun = a.IDAkun
+        WHERE u.IDAkun = @idAkun
+      `, { idAkun: session.user.id })
 
-    if (!user) {
-      return NextResponse.json({ error: 'User tidak ditemukan' }, { status: 404 })
+      if (!user) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      }
+
+      return NextResponse.json({
+        id: user.IDUser,
+        name: user.Nama,
+        email: user.Email,
+        phone: user.NoTelp,
+        address: user.Alamat,
+        role: 'USER'
+      })
+    } else if (session.user.role === 'TPS') {
+      const tps = await executeQuerySingle<{
+        IDTps: string
+        NamaTps: string
+        Alamat: string
+        NoTelp: string
+        Email: string
+      }>(`
+        SELECT p.IDTps, p.NamaTps, p.Alamat, p.NoTelp, a.Email
+        FROM ProfileTps p
+        JOIN Akun a ON p.IDAkun = a.IDAkun
+        WHERE p.IDAkun = @idAkun
+      `, { idAkun: session.user.id })
+
+      if (!tps) {
+        return NextResponse.json({ error: 'TPS not found' }, { status: 404 })
+      }
+
+      return NextResponse.json({
+        id: tps.IDTps,
+        name: tps.NamaTps,
+        email: tps.Email,
+        phone: tps.NoTelp,
+        address: tps.Alamat,
+        role: 'TPS'
+      })
     }
 
-    return NextResponse.json({ data: user })
+    return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
   } catch (error) {
     console.error('Get user profile error:', error)
-    return NextResponse.json(
-      { error: 'Terjadi kesalahan' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
 export async function PUT(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }

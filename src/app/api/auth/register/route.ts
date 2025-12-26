@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { hash } from 'bcryptjs'
-import prisma from '@/lib/prisma'
+import { executeQuery, executeQuerySingle, getPool } from '@/lib/db'
+import sql from 'mssql'
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,11 +17,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if email already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email }
-    })
+    const existingAkun = await executeQuerySingle<{ IDAkun: string }>(
+      `SELECT IDAkun FROM Akun WHERE Email = @email`,
+      { email }
+    )
 
-    if (existingUser) {
+    if (existingAkun) {
       return NextResponse.json(
         { error: 'Email sudah terdaftar' },
         { status: 400 }
@@ -30,36 +32,61 @@ export async function POST(req: NextRequest) {
     // Hash password
     const hashedPassword = await hash(password, 12)
 
-    // Create user
-    const user = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        name,
-        phone,
-        role: role || 'USER'
+    // Use transaction
+    const pool = await getPool()
+    const transaction = new sql.Transaction(pool)
+
+    try {
+      await transaction.begin()
+
+      // 1. Insert Akun
+      const akunResult = await transaction.request()
+        .input('email', sql.NVarChar, email)
+        .input('password', sql.NVarChar, hashedPassword)
+        .input('role', sql.NVarChar, role || 'USER')
+        .query(`
+          INSERT INTO Akun (Email, Password, Role)
+          OUTPUT INSERTED.IDAkun
+          VALUES (@email, @password, @role)
+        `)
+
+      const akunId = akunResult.recordset[0].IDAkun
+
+      // 2. Insert User or ProfileTps
+      if (role === 'TPS' && tpsData) {
+        await transaction.request()
+          .input('idAkun', sql.NVarChar, akunId)
+          .input('namaTps', sql.NVarChar, tpsData.tpsName)
+          .input('alamat', sql.NVarChar, tpsData.address)
+          .input('latitude', sql.Float, tpsData.latitude || null)
+          .input('longitude', sql.Float, tpsData.longitude || null)
+          .input('jamOperasional', sql.NVarChar, tpsData.operatingHours || null)
+          .input('noTelp', sql.NVarChar, phone || null)
+          .query(`
+            INSERT INTO ProfileTps (IDAkun, NamaTps, Alamat, Latitude, Longitude, JamOperasional, NoTelp)
+            VALUES (@idAkun, @namaTps, @alamat, @latitude, @longitude, @jamOperasional, @noTelp)
+          `)
+      } else {
+        await transaction.request()
+          .input('idAkun', sql.NVarChar, akunId)
+          .input('nama', sql.NVarChar, name)
+          .input('noTelp', sql.NVarChar, phone || null)
+          .query(`
+            INSERT INTO [User] (IDAkun, Nama, NoTelp)
+            VALUES (@idAkun, @nama, @noTelp)
+          `)
       }
-    })
 
-    // If TPS role, create TPS profile
-    if (role === 'TPS' && tpsData) {
-      await prisma.tPSProfile.create({
-        data: {
-          userId: user.id,
-          tpsName: tpsData.tpsName,
-          latitude: tpsData.latitude,
-          longitude: tpsData.longitude,
-          address: tpsData.address,
-          operatingHours: tpsData.operatingHours,
-          capacity: tpsData.capacity
-        }
-      })
+      await transaction.commit()
+
+      return NextResponse.json(
+        { message: 'Registrasi berhasil', userId: akunId },
+        { status: 201 }
+      )
+    } catch (error) {
+      await transaction.rollback()
+      throw error
     }
-
-    return NextResponse.json(
-      { message: 'Registrasi berhasil', userId: user.id },
-      { status: 201 }
-    )
   } catch (error) {
     console.error('Registration error:', error)
     return NextResponse.json(

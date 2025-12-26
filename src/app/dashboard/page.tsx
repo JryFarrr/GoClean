@@ -226,31 +226,32 @@ export default function DashboardPage() {
 
       {/* Quick Actions */}
       {role === 'USER' && (
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
           <Link
             href="/pickup/new"
-            className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition flex items-center space-x-4 border-2 border-transparent hover:border-green-500"
+            className="bg-white rounded-xl p-8 shadow-md hover:shadow-lg transition flex items-center space-x-6 border-2 border-transparent hover:border-green-500"
           >
-            <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
-              <Plus size={28} className="text-green-600" />
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <Plus size={36} className="text-green-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-lg text-gray-800">Antar/Jemput Sampah</h3>
-              <p className="text-gray-600 text-sm">Antarkan ke TPS atau minta dijemput</p>
+              <h3 className="font-semibold text-xl text-gray-800 mb-1">Antar/Jemput Sampah</h3>
+              <p className="text-gray-600 text-base">Antarkan ke TPS atau minta dijemput</p>
             </div>
           </Link>
 
           <Link
             href="/pickup/history"
-            className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition flex items-center space-x-4 border-2 border-transparent hover:border-green-500"
+            className="bg-white rounded-xl p-8 shadow-md hover:shadow-lg transition flex items-center space-x-6 border-2 border-transparent hover:border-green-500"
           >
-            <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
-              <Clock size={28} className="text-green-600" />
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <Clock size={36} className="text-green-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-lg text-gray-800">Riwayat</h3>
-              <p className="text-gray-600 text-sm">Lihat riwayat penjemputan</p>
+              <h3 className="font-semibold text-xl text-gray-800 mb-1">Riwayat</h3>
+              <p className="text-gray-600 text-base">Lihat riwayat penjemputan</p>
             </div>
+          </Link>
         </div>
       )}
 
@@ -285,7 +286,7 @@ export default function DashboardPage() {
       )}
 
       {/* Stats Cards */}
-      <div className="grid md:grid-cols-4 gap-6 mb-8">
+      <div className="grid md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white rounded-xl p-6 shadow-md border border-green-100">
           <div className="flex items-center justify-between mb-4">
             <AlertCircle className="text-green-600" size={24} />
@@ -340,8 +341,8 @@ export default function DashboardPage() {
               >
                 <div className="flex items-center space-x-4">
                   <div className={`w-3 h-3 rounded-full ${pickup.status === 'PENDING' ? 'bg-yellow-500' :
-                      pickup.status === 'ACCEPTED' ? 'bg-green-400' :
-                        pickup.status === 'COMPLETED' ? 'bg-green-600' : 'bg-gray-500'
+                    pickup.status === 'ACCEPTED' ? 'bg-green-400' :
+                      pickup.status === 'COMPLETED' ? 'bg-green-600' : 'bg-gray-500'
                     }`} />
                   <div>
                     <p className="font-medium text-gray-800">{pickup.address}</p>
@@ -355,8 +356,8 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${pickup.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                    pickup.status === 'ACCEPTED' ? 'bg-green-100 text-green-800' :
-                      pickup.status === 'COMPLETED' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                  pickup.status === 'ACCEPTED' ? 'bg-green-100 text-green-800' :
+                    pickup.status === 'COMPLETED' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                   }`}>
                   {pickup.status === 'PENDING' && 'Menunggu'}
                   {pickup.status === 'ACCEPTED' && 'Diterima'}

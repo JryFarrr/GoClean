@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import prisma from '@/lib/prisma'
+import { executeQuery, executeQuerySingle, getPool } from '@/lib/db'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 import { existsSync } from 'fs'
+import sql from 'mssql'
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,74 +23,80 @@ export async function POST(req: NextRequest) {
     const wasteItems = JSON.parse(formData.get('wasteItems') as string)
     const scheduledAt = formData.get('scheduledAt') as string
     const tpsId = formData.get('tpsId') as string
-    const type = (formData.get('type') as string) || 'PICKUP' // Default to PICKUP if not provided
+    const type = (formData.get('type') as string) || 'PICKUP'
 
-    // Handle file uploads
+    // Handle file uploads (skipped for fast-track)
     const photos: string[] = []
     const videos: string[] = []
 
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads')
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true })
+    // Get User ID from session (session.user.id is Akun ID)
+    const user = await executeQuerySingle<{ IDUser: string }>(
+      `SELECT IDUser FROM [User] WHERE IDAkun = @idAkun`,
+      { idAkun: session.user.id }
+    )
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Process uploaded files
-    const files = formData.getAll('files') as File[]
-    for (const file of files) {
-      const bytes = await file.arrayBuffer()
-      const buffer = Buffer.from(bytes)
+    // Get kategori sampah mapping
+    const kategoris = await executeQuery<{ IDKategori: string; JenisSampah: string }>(
+      `SELECT IDKategori, JenisSampah FROM KategoriSampah`
+    )
+    const kategoriMap = new Map(kategoris.map(k => [k.JenisSampah, k.IDKategori]))
 
-      const uniqueName = `${Date.now()}-${file.name}`
-      const filePath = path.join(uploadDir, uniqueName)
-      await writeFile(filePath, buffer)
+    // Use transaction
+    const pool = await getPool()
+    const transaction = new sql.Transaction(pool)
 
-      const fileUrl = `/uploads/${uniqueName}`
+    try {
+      await transaction.begin()
 
-      if (file.type.startsWith('image/')) {
-        photos.push(fileUrl)
-      } else if (file.type.startsWith('video/')) {
-        videos.push(fileUrl)
+      // Insert Transaksi
+      const transaksiResult = await transaction.request()
+        .input('idUser', sql.NVarChar, user.IDUser)
+        .input('idTps', sql.NVarChar, tpsId || null)
+        .input('type', sql.NVarChar, type)
+        .input('latitude', sql.Float, latitude)
+        .input('longitude', sql.Float, longitude)
+        .input('alamatJemput', sql.NVarChar, address)
+        .input('description', sql.NVarChar, description || null)
+        .input('scheduledAt', sql.DateTime, scheduledAt ? new Date(scheduledAt) : null)
+        .input('statusTransaksi', sql.NVarChar, 'PENDING')
+        .query(`
+          INSERT INTO Transaksi (IDUser, IDTps, Type, Latitude, Longitude, AlamatJemput, Description, ScheduledAt, TanggalTransaksi, StatusTransaksi)
+          OUTPUT INSERTED.IDTransaksi
+          VALUES (@idUser, @idTps, @type, @latitude, @longitude, @alamatJemput, @description, @scheduledAt, GETDATE(), @statusTransaksi)
+        `)
+
+      const transaksiId = transaksiResult.recordset[0].IDTransaksi
+
+      // Insert DetailSampah
+      for (const item of wasteItems) {
+        const kategoriId = kategoriMap.get(item.wasteType) || kategoris[0]?.IDKategori
+
+        await transaction.request()
+          .input('idTransaksi', sql.NVarChar, transaksiId)
+          .input('idKategori', sql.NVarChar, kategoriId)
+          .input('berat', sql.Float, item.estimatedWeight)
+          .input('estimatedWeight', sql.Float, item.estimatedWeight)
+          .query(`
+            INSERT INTO DetailSampah (IDTransaksi, IDKategori, Berat, EstimatedWeight)
+            VALUES (@idTransaksi, @idKategori, @berat, @estimatedWeight)
+          `)
       }
+
+      await transaction.commit()
+
+      return NextResponse.json({ id: transaksiId, message: 'Transaksi created' }, { status: 201 })
+    } catch (error) {
+      await transaction.rollback()
+      throw error
     }
-
-    // Create pickup request
-    const pickupRequest = await prisma.pickupRequest.create({
-      data: {
-        userId: session.user.id,
-        tpsId: tpsId || null,
-        type, // Add type field (DROP_OFF or PICKUP)
-        latitude,
-        longitude,
-        address,
-        description,
-        photos: JSON.stringify(photos),
-        videos: JSON.stringify(videos),
-        scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
-        wasteItems: {
-          create: wasteItems.map((item: { wasteType: string; estimatedWeight: number }) => ({
-            wasteType: item.wasteType,
-            estimatedWeight: item.estimatedWeight
-          }))
-        }
-      },
-      include: {
-        wasteItems: true,
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true
-          }
-        }
-      }
-    })
-
-    return NextResponse.json(pickupRequest, { status: 201 })
   } catch (error) {
     console.error('Pickup request error:', error)
     return NextResponse.json(
-      { error: `Terjadi kesalahan saat membuat permintaan penjemputan: ${error instanceof Error ? error.message : String(error)}` },
+      { error: `Terjadi kesalahan: ${error instanceof Error ? error.message : String(error)}` },
       { status: 500 }
     )
   }
@@ -108,70 +115,121 @@ export async function GET(req: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
 
-    const where: Record<string, unknown> = {}
+    // Build WHERE clause based on role
+    let whereClause = ''
+    const params: any = {}
 
-    // Filter based on user role
     if (session.user.role === 'USER') {
-      where.userId = session.user.id
+      // Get user ID from Akun ID
+      const user = await executeQuerySingle<{ IDUser: string }>(
+        `SELECT IDUser FROM [User] WHERE IDAkun = @idAkun`,
+        { idAkun: session.user.id }
+      )
+      if (user) {
+        whereClause = 'WHERE t.IDUser = @userId'
+        params.userId = user.IDUser
+      }
     } else if (session.user.role === 'TPS') {
-      // TPS can see pending requests and their accepted ones
-      where.OR = [
-        { status: 'PENDING' },
-        { tpsId: session.user.id }
-      ]
+      // Get TPS ID from Akun ID
+      const tps = await executeQuerySingle<{ IDTps: string }>(
+        `SELECT IDTps FROM ProfileTps WHERE IDAkun = @idAkun`,
+        { idAkun: session.user.id }
+      )
+      if (tps) {
+        whereClause = 'WHERE (t.StatusTransaksi = \'PENDING\' OR t.IDTps = @tpsId)'
+        params.tpsId = tps.IDTps
+      }
     }
-    // ADMIN can see all
 
     if (status) {
-      where.status = status
+      whereClause += whereClause ? ' AND' : 'WHERE'
+      whereClause += ' t.StatusTransaksi = @status'
+      params.status = status
     }
 
-    const [pickupRequests, total] = await Promise.all([
-      prisma.pickupRequest.findMany({
-        where,
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              phone: true
-            }
-          },
-          tps: {
-            select: {
-              id: true,
-              name: true,
-              tpsProfile: {
-                select: {
-                  tpsName: true,
-                  latitude: true,
-                  longitude: true,
-                  address: true,
-                  phone: true,
-                  operatingHours: true
-                }
-              }
-            }
-          },
-          wasteItems: true
-        },
-        orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * limit,
-        take: limit
-      }),
-      prisma.pickupRequest.count({ where })
-    ])
+    // Get total count
+    const countResult = await executeQuerySingle<{ Total: number }>(
+      `SELECT COUNT(*) as Total FROM Transaksi t ${whereClause}`,
+      params
+    )
+    const total = countResult?.Total || 0
 
-    // Parse photos and videos from JSON string to array
-    const parsedPickupRequests = pickupRequests.map(pickup => ({
-      ...pickup,
-      photos: typeof pickup.photos === 'string' ? JSON.parse(pickup.photos || '[]') : pickup.photos,
-      videos: typeof pickup.videos === 'string' ? JSON.parse(pickup.videos || '[]') : pickup.videos
-    }))
+    // Get paginated results with joins
+    const offset = (page - 1) * limit
+    const transaksiList = await executeQuery<any>(`
+      SELECT 
+        t.IDTransaksi, t.IDUser, t.IDTps, t.Type, t.StatusTransaksi,
+        t.AlamatJemput, t.Description, t.Latitude, t.Longitude,
+        t.ScheduledAt, t.CompletedAt, t.CreatedAt, t.UpdatedAt,
+        u.Nama as UserNama, u.NoTelp as UserNoTelp, ua.Email as UserEmail,
+        tps.NamaTps, tps.Alamat as TpsAlamat, tps.Latitude as TpsLatitude, 
+        tps.Longitude as TpsLongitude, tps.NoTelp as TpsNoTelp, 
+        tps.JamOperasional, tpsa.Email as TpsEmail
+      FROM Transaksi t
+      LEFT JOIN [User] u ON t.IDUser = u.IDUser
+      LEFT JOIN Akun ua ON u.IDAkun = ua.IDAkun
+      LEFT JOIN ProfileTps tps ON t.IDTps = tps.IDTps
+      LEFT JOIN Akun tpsa ON tps.IDAkun = tpsa.IDAkun
+      ${whereClause}
+      ORDER BY t.CreatedAt DESC
+      OFFSET @offset ROWS
+      FETCH NEXT @limit ROWS ONLY
+    `, { ...params, offset, limit })
+
+    // Get waste items for each transaksi
+    const transformedData = await Promise.all(
+      transaksiList.map(async (t) => {
+        const wasteItems = await executeQuery<any>(`
+          SELECT ds.IDDetail as id, k.JenisSampah as wasteType, 
+                 ds.EstimatedWeight as estimatedWeight, 
+                 ds.ActualWeight as actualWeight, ds.Price as price
+          FROM DetailSampah ds
+          JOIN KategoriSampah k ON ds.IDKategori = k.IDKategori
+          WHERE ds.IDTransaksi = @idTransaksi
+        `, { idTransaksi: t.IDTransaksi })
+
+        return {
+          id: t.IDTransaksi,
+          userId: t.IDUser,
+          tpsId: t.IDTps,
+          type: t.Type,
+          status: t.StatusTransaksi,
+          address: t.AlamatJemput,
+          description: t.Description,
+          latitude: t.Latitude,
+          longitude: t.Longitude,
+          scheduledAt: t.ScheduledAt,
+          completedAt: t.CompletedAt,
+          createdAt: t.CreatedAt,
+          updatedAt: t.UpdatedAt,
+          user: {
+            id: t.IDUser,
+            name: t.UserNama,
+            email: t.UserEmail,
+            phone: t.UserNoTelp
+          },
+          tps: t.IDTps ? {
+            id: t.IDTps,
+            name: t.NamaTps,
+            email: t.TpsEmail,
+            tpsProfile: {
+              tpsName: t.NamaTps,
+              latitude: t.TpsLatitude,
+              longitude: t.TpsLongitude,
+              address: t.TpsAlamat,
+              phone: t.TpsNoTelp,
+              operatingHours: t.JamOperasional
+            }
+          } : null,
+          wasteItems,
+          photos: [],
+          videos: []
+        }
+      })
+    )
 
     return NextResponse.json({
-      data: parsedPickupRequests,
+      data: transformedData,
       pagination: {
         page,
         limit,
