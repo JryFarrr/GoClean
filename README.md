@@ -577,20 +577,6 @@ npm run db:generate      # Generate Prisma Client
 npm run build            # Production build
 npm run start            # Start production server
 ```
-
----
-
-## ⚠️ Peringatan Keamanan
-
-**PENTING:** Proyek ini mengandung *hardcoded* API key untuk layanan OpenRouteService di dalam file `src/app/pickup/new/page.tsx`. Ini merupakan risiko keamanan.
-
-**Rekomendasi:** Pindahkan API key tersebut ke dalam file `.env` Anda untuk menjaga keamanannya.
-
-**Contoh `.env`:**
-```
-ORS_API_KEY="your-real-api-key-from-openrouteservice"
-```
-
 ## 🚀 Instalasi & Setup
 
 ### Prerequisites
