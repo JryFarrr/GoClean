@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { writeFile, unlink } from 'fs/promises'
 import path from 'path'
-import prisma from '@/lib/prisma'
+import { executeQuerySingle, executeQuery } from '@/lib/db'
 
 /**
  * API endpoint untuk upload gambar profil TPS
@@ -50,14 +50,13 @@ export async function POST(req: NextRequest) {
         }
 
         // Get TPS profile untuk cek gambar lama
-        const tpsProfile = await prisma.tPSProfile.findUnique({
-            where: { userId: session.user.id },
-            select: { profileImage: true }
-        })
+        const tpsProfile = await executeQuerySingle<{ Foto: string | null }>(`
+            SELECT Foto FROM ProfileTps WHERE IDAkun = @idAkun
+        `, { idAkun: session.user.id })
 
         // Hapus gambar lama jika ada
-        if (tpsProfile?.profileImage) {
-            const oldImagePath = path.join(process.cwd(), 'public', tpsProfile.profileImage)
+        if (tpsProfile?.Foto) {
+            const oldImagePath = path.join(process.cwd(), 'public', tpsProfile.Foto)
             try {
                 await unlink(oldImagePath)
             } catch (error) {
@@ -83,9 +82,13 @@ export async function POST(req: NextRequest) {
         const imageUrl = `/uploads/tps-profiles/${fileName}`
 
         // Update profile dengan URL gambar baru
-        await prisma.tPSProfile.update({
-            where: { userId: session.user.id },
-            data: { profileImage: imageUrl }
+        await executeQuery(`
+            UPDATE ProfileTps 
+            SET Foto = @foto 
+            WHERE IDAkun = @idAkun
+        `, {
+            foto: imageUrl,
+            idAkun: session.user.id
         })
 
         return NextResponse.json({
@@ -121,28 +124,28 @@ export async function DELETE() {
         }
 
         // Get TPS profile untuk mendapatkan path gambar
-        const tpsProfile = await prisma.tPSProfile.findUnique({
-            where: { userId: session.user.id },
-            select: { profileImage: true }
-        })
+        const tpsProfile = await executeQuerySingle<{ Foto: string | null }>(`
+            SELECT Foto FROM ProfileTps WHERE IDAkun = @idAkun
+        `, { idAkun: session.user.id })
 
-        if (!tpsProfile?.profileImage) {
+        if (!tpsProfile?.Foto) {
             return NextResponse.json({ error: 'No profile image found' }, { status: 404 })
         }
 
         // Hapus file dari filesystem
-        const imagePath = path.join(process.cwd(), 'public', tpsProfile.profileImage)
+        const imagePath = path.join(process.cwd(), 'public', tpsProfile.Foto)
         try {
             await unlink(imagePath)
         } catch (error) {
             console.log('Image file not found:', error)
         }
 
-        // Update database untuk set profileImage ke null
-        await prisma.tPSProfile.update({
-            where: { userId: session.user.id },
-            data: { profileImage: null }
-        })
+        // Update database untuk set Foto ke null
+        await executeQuery(`
+            UPDATE ProfileTps 
+            SET Foto = NULL 
+            WHERE IDAkun = @idAkun
+        `, { idAkun: session.user.id })
 
         return NextResponse.json({
             message: 'Profile image deleted successfully'

@@ -62,7 +62,7 @@ export default function MediaUploader({
       <div
         {...getRootProps()}
         className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition
-          ${isDragActive ? 'border-green-500 bg-green-50' : 'border-gray-300 hover:border-green-400'}
+          ${isDragActive ? 'border-red-500 bg-red-50' : 'border-gray-300 hover:border-red-400'}
           ${files.length >= maxFiles ? 'opacity-50 cursor-not-allowed' : ''}
         `}
       >
@@ -73,12 +73,12 @@ export default function MediaUploader({
             {acceptVideos && <Video size={32} className="text-gray-400" />}
           </div>
           {isDragActive ? (
-            <p className="text-green-600">Lepaskan file di sini...</p>
+            <p className="text-red-600">Lepaskan file di sini...</p>
           ) : (
             <>
               <p className="text-gray-600">
                 Drag & drop foto/video atau{' '}
-                <span className="text-green-600 font-semibold">klik untuk memilih</span>
+                <span className="text-red-600 font-semibold">klik untuk memilih</span>
               </p>
               <p className="text-sm text-gray-400">
                 Maksimal {maxFiles} file. Format: JPG, PNG, MP4, WebM
@@ -125,7 +125,7 @@ export default function MediaUploader({
 
       {/* Camera Capture Buttons */}
       <div className="flex space-x-4">
-        <label className="flex-1 flex items-center justify-center space-x-2 bg-green-600 text-white px-4 py-3 rounded-lg cursor-pointer hover:bg-green-700 transition">
+        <label className="flex-1 flex items-center justify-center space-x-2 bg-red-600 text-white px-4 py-3 rounded-lg cursor-pointer hover:bg-red-700 transition">
           <Camera size={20} />
           <span>Ambil Foto</span>
           <input
