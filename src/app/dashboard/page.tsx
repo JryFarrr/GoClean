@@ -242,7 +242,7 @@ export default function DashboardPage() {
 
           <Link
             href="/pickup/history"
-            className="bg-green rounded-xl p-8 shadow-md hover:shadow-lg transition flex items-center space-x-6 border-2 border-transparent hover:border-green-500"
+            className="bg-white rounded-xl p-8 shadow-md hover:shadow-lg transition flex items-center space-x-6 border-2 border-transparent hover:border-green-500"
           >
             <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
               <Clock size={36} className="text-green-600" />
@@ -256,30 +256,30 @@ export default function DashboardPage() {
       )}
 
       {role === 'TPS' && (
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
           <Link
             href="/tps/requests"
-            className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition flex items-center space-x-4 border-2 border-transparent hover:border-green-500"
+            className="bg-white rounded-xl p-8 shadow-md hover:shadow-lg transition flex items-center space-x-6 border-2 border-transparent hover:border-green-500"
           >
-            <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
-              <Truck size={28} className="text-green-600" />
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <Truck size={36} className="text-green-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-lg text-gray-800">Permintaan Baru</h3>
-              <p className="text-gray-600 text-sm">Lihat permintaan penjemputan</p>
+              <h3 className="font-semibold text-xl text-gray-800 mb-1">Permintaan Baru</h3>
+              <p className="text-gray-600 text-base">Lihat permintaan penjemputan</p>
             </div>
           </Link>
 
           <Link
             href="/tps/map"
-            className="bg-green rounded-xl p-6 shadow-md hover:shadow-lg transition flex items-center space-x-4 border-2 border-transparent hover:border-green-500"
+            className="bg-white rounded-xl p-8 shadow-md hover:shadow-lg transition flex items-center space-x-6 border-2 border-transparent hover:border-green-500"
           >
-            <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
-              <MapPin size={28} className="text-green-600" />
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <MapPin size={36} className="text-green-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-lg text-gray-800">Peta Lokasi</h3>
-              <p className="text-gray-600 text-sm">Lihat lokasi penjemputan</p>
+              <h3 className="font-semibold text-xl text-gray-800 mb-1">Peta Lokasi</h3>
+              <p className="text-gray-600 text-base">Lihat lokasi penjemputan</p>
             </div>
           </Link>
         </div>
@@ -296,7 +296,7 @@ export default function DashboardPage() {
           <p className="text-gray-600 text-sm">Menunggu dijemput</p>
         </div>
 
-        <div className="bg-green rounded-xl p-6 shadow-md border border-green-100">
+        <div className="bg-white rounded-xl p-6 shadow-md border border-green-100">
           <div className="flex items-center justify-between mb-4">
             <Truck className="text-green-600" size={24} />
             <span className="text-sm text-gray-600">Dalam Proses</span>
@@ -305,7 +305,7 @@ export default function DashboardPage() {
           <p className="text-gray-600 text-sm">Sedang dijemput</p>
         </div>
 
-        <div className="bg-green rounded-xl p-6 shadow-md border border-green-100">
+        <div className="bg-white rounded-xl p-6 shadow-md border border-green-100">
           <div className="flex items-center justify-between mb-4">
             <CheckCircle className="text-green-600" size={24} />
             <span className="text-sm text-gray-600">Selesai</span>

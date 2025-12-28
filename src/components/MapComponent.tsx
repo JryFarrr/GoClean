@@ -144,8 +144,18 @@ export default function MapComponent(props: MapComponentProps) {
       mapRef.current.removeLayer(choroplethLayerRef.current);
     }
 
-    if (choroplethGeoJson && choroplethColors) {
-      console.log('Choropleth data received:', { choroplethGeoJson, choroplethColors, choroplethTransaksi });
+    // Render choropleth if GeoJSON is available (show gray if no color data)
+    if (choroplethGeoJson) {
+      const hasColorData = choroplethColors && Object.keys(choroplethColors).length > 0;
+
+      if (hasColorData) {
+        console.log('Choropleth with color data:', {
+          colorCount: Object.keys(choroplethColors).length,
+          colors: choroplethColors
+        });
+      } else {
+        console.log('Choropleth without color data - showing default gray');
+      }
 
       const toTitleCase = (str: string) => {
         if (!str) return '';
@@ -155,31 +165,23 @@ export default function MapComponent(props: MapComponentProps) {
         );
       };
 
-      // Log first feature's properties to check key names
-      if (choroplethGeoJson.features && choroplethGeoJson.features.length > 0) {
-        console.log('Inspecting first GeoJSON feature properties:', choroplethGeoJson.features[0].properties);
-      }
-
       choroplethLayerRef.current = L.geoJSON(choroplethGeoJson, {
         style: (feature) => {
           // Safety check for feature properties
           if (!feature || !feature.properties) {
-            console.warn('Feature missing properties:', feature);
             return {
               fillColor: '#E5E7EB',
-              weight: 2,
-              opacity: 1,
-              color: 'white',
-              dashArray: '3',
-              fillOpacity: 0.4
+              weight: 1,
+              opacity: 0.5,
+              color: '#9CA3AF',
+              fillOpacity: 0.3
             };
           }
 
-          // NEW: For kelurahan GeoJSON, map kd_kecamatan to kecamatan name
+          // For kelurahan GeoJSON, map kd_kecamatan to kecamatan name
           let kecamatanName: string;
 
           if (feature.properties.kd_kecamatan) {
-            // Import dynamically to avoid issues
             const kecamatanCodeMap: Record<string, string> = {
               '001': 'Karang Pilang', '002': 'Wonocolo', '003': 'Rungkut',
               '004': 'Gunung Anyar', '005': 'Sukolilo', '006': 'Mulyorejo',
@@ -197,7 +199,6 @@ export default function MapComponent(props: MapComponentProps) {
             const kdKec = feature.properties.kd_kecamatan.padStart(3, '0');
             kecamatanName = kecamatanCodeMap[kdKec] || 'Unknown';
           } else {
-            // Fallback: Try multiple property names (support different GeoJSON formats)
             const kecamatanNameRaw = feature.properties.KECAMATAN ||
               feature.properties.kecamatan ||
               feature.properties.NM_KEC ||
@@ -210,11 +211,8 @@ export default function MapComponent(props: MapComponentProps) {
             kecamatanName = toTitleCase(kecamatanNameRaw);
           }
 
-          const color = choroplethColors[kecamatanName] || '#E5E7EB'; // Default gray
-
-          if (!choroplethColors[kecamatanName]) {
-            console.warn(`No color found for kecamatan: "${kecamatanName}" (kd_kecamatan: "${feature.properties.kd_kecamatan}"). Using default.`);
-          }
+          // Get color from data, or use LIGHT BLUE default (for easy debugging)
+          const color = (choroplethColors && choroplethColors[kecamatanName]) || '#93C5FD'; // blue-300
 
           return {
             fillColor: color,
@@ -222,11 +220,10 @@ export default function MapComponent(props: MapComponentProps) {
             opacity: 1,
             color: 'white',
             dashArray: '3',
-            fillOpacity: 0.7
+            fillOpacity: 0.5
           };
         },
         onEachFeature: (feature, layer) => {
-          // Safety check
           if (!feature || !feature.properties) {
             return;
           }
@@ -248,8 +245,6 @@ export default function MapComponent(props: MapComponentProps) {
           );
         }
       }).addTo(mapRef.current);
-    } else {
-      console.log('Choropleth props not available. Skipping layer.', { choroplethGeoJson, choroplethColors });
     }
   }, [choroplethGeoJson, choroplethColors, choroplethTransaksi]);
 

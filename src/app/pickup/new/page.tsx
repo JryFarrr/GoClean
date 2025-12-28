@@ -65,6 +65,7 @@ export default function NewPickupPage() {
     const loadChoroplethData = async () => {
       // 1. Set GeoJSON from direct import
       setKecamatanGeoJson(surabayaGeoJson as FeatureCollection);
+      console.log('✅ GeoJSON loaded:', surabayaGeoJson ? `${surabayaGeoJson.features?.length} features` : 'null');
 
       // 2. Fetch stats for choropleth, but don't let it break the map
       try {

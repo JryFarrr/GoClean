@@ -64,9 +64,9 @@ export async function POST(req: NextRequest) {
         .input('scheduledAt', sql.DateTime, scheduledAt ? new Date(scheduledAt) : null)
         .input('statusTransaksi', sql.NVarChar, 'PENDING')
         .query(`
-          INSERT INTO Transaksi (IDUser, IDTps, Type, Latitude, Longitude, AlamatJemput, Description, ScheduledAt, TanggalTransaksi, StatusTransaksi)
+          INSERT INTO Transaksi (IDTransaksi, IDUser, IDTps, Type, Latitude, Longitude, AlamatJemput, Description, ScheduledAt, TanggalTransaksi, StatusTransaksi, CreatedAt, UpdatedAt)
           OUTPUT INSERTED.IDTransaksi
-          VALUES (@idUser, @idTps, @type, @latitude, @longitude, @alamatJemput, @description, @scheduledAt, GETDATE(), @statusTransaksi)
+          VALUES (NEWID(), @idUser, @idTps, @type, @latitude, @longitude, @alamatJemput, @description, @scheduledAt, GETDATE(), @statusTransaksi, GETDATE(), GETDATE())
         `)
 
       const transaksiId = transaksiResult.recordset[0].IDTransaksi
@@ -81,8 +81,8 @@ export async function POST(req: NextRequest) {
           .input('berat', sql.Float, item.estimatedWeight)
           .input('estimatedWeight', sql.Float, item.estimatedWeight)
           .query(`
-            INSERT INTO DetailSampah (IDTransaksi, IDKategori, Berat, EstimatedWeight)
-            VALUES (@idTransaksi, @idKategori, @berat, @estimatedWeight)
+            INSERT INTO DetailSampah (IDDetail, IDTransaksi, IDKategori, Berat, EstimatedWeight, CreatedAt, UpdatedAt)
+            VALUES (NEWID(), @idTransaksi, @idKategori, @berat, @estimatedWeight, GETDATE(), GETDATE())
           `)
       }
 

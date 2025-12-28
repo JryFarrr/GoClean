@@ -449,27 +449,35 @@ export default function TPSRequestsPage() {
 
                 {pickup.status === 'PICKED_UP' && (
                   <>
-                    {!pickup.transaction ? (
-                      <>
-                        <Link
-                          href={`/tps/transaction/${pickup.id}`}
-                          className="flex-1 flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-                        >
-                          Input Transaksi & Bayar
-                        </Link>
-                        <button
-                          onClick={() => handleStatusUpdate(pickup.id, 'ON_THE_WAY')}
-                          className="flex items-center justify-center px-4 py-2 bg-orange-100 text-orange-600 rounded-lg hover:bg-orange-200 transition"
-                          title="Kembalikan ke Dalam Perjalanan"
-                        >
-                          <ArrowLeft size={18} />
-                        </button>
-                      </>
-                    ) : (
-                      <div className="flex-1 p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
-                        <p className="text-blue-700 font-medium text-sm">💰 Menunggu verifikasi user</p>
-                      </div>
-                    )}
+                    <div className="flex-1 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm font-semibold text-blue-800 mb-2">💰 Instruksi Pembayaran</p>
+                      <p className="text-sm text-blue-700 mb-2">
+                        Silakan bayar langsung ke Gopay user:
+                      </p>
+                      {pickup.user.phone && (
+                        <p className="text-lg font-bold text-blue-900 mb-1">
+                          📱 {pickup.user.phone}
+                        </p>
+                      )}
+                      <p className="text-xs text-blue-600">
+                        Setelah user membayar, klik tombol "Selesai"
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleStatusUpdate(pickup.id, 'COMPLETED')}
+                      className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                      title="Tandai Selesai"
+                    >
+                      <Check size={18} className="mr-1" />
+                      Selesai
+                    </button>
+                    <button
+                      onClick={() => handleStatusUpdate(pickup.id, 'ON_THE_WAY')}
+                      className="flex items-center justify-center px-4 py-2 bg-orange-100 text-orange-600 rounded-lg hover:bg-orange-200 transition"
+                      title="Kembalikan ke Dalam Perjalanan"
+                    >
+                      <ArrowLeft size={18} />
+                    </button>
                   </>
                 )}
 

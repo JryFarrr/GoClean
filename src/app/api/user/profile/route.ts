@@ -94,30 +94,52 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Nama harus diisi' }, { status: 400 })
     }
 
-    const updatedUser = await prisma.user.update({
-      where: { id: session.user.id },
-      data: {
-        name: name.trim(),
-        phone: phone?.trim() || null,
-        address: address?.trim() || null,
-        gopayNumber: gopayNumber?.trim() || null,
-        whatsappNumber: whatsappNumber?.trim() || null
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        phone: true,
-        address: true,
-        gopayNumber: true,
-        whatsappNumber: true,
-        role: true
-      }
+    // Update user profile
+    await executeQuerySingle(`
+      UPDATE [User]
+      SET Nama = @name,
+          NoTelp = @phone,
+          Alamat = @address,
+          NoGopay = @gopayNumber,
+          NoWa = @whatsappNumber,
+          UpdatedAt = GETDATE()
+      WHERE IDAkun = @idAkun
+    `, {
+      name: name.trim(),
+      phone: phone?.trim() || null,
+      address: address?.trim() || null,
+      gopayNumber: gopayNumber?.trim() || null,
+      whatsappNumber: whatsappNumber?.trim() || null,
+      idAkun: session.user.id
     })
+
+    // Get updated user data
+    const updatedUser = await executeQuerySingle<{
+      IDUser: string
+      Nama: string
+      Alamat: string
+      NoTelp: string
+      NoGopay: string
+      NoWa: string
+      Email: string
+    }>(`
+      SELECT u.IDUser, u.Nama, u.Alamat, u.NoTelp, u.NoGopay, u.NoWa, a.Email
+      FROM [User] u
+      JOIN Akun a ON u.IDAkun = a.IDAkun
+      WHERE u.IDAkun = @idAkun
+    `, { idAkun: session.user.id })
 
     return NextResponse.json({
       message: 'Profil berhasil diperbarui',
-      data: updatedUser
+      user: {
+        id: updatedUser?.IDUser,
+        name: updatedUser?.Nama,
+        email: updatedUser?.Email,
+        phone: updatedUser?.NoTelp,
+        address: updatedUser?.Alamat,
+        gopayNumber: updatedUser?.NoGopay,
+        whatsappNumber: updatedUser?.NoWa
+      }
     })
   } catch (error) {
     console.error('Update user profile error:', error)
